@@ -9,7 +9,7 @@ from orchestrator.types import SubscriptionLifecycle
 # expected types
 
 
-class NodeInactiveBlock(ProductBlockModel, product_block_name="Node"):
+class NodeBlockInactive(ProductBlockModel, product_block_name="Node"):
     """Object model for a Node as used by Node Service"""
 
     # when first created we expect all resources to be none
@@ -19,7 +19,7 @@ class NodeInactiveBlock(ProductBlockModel, product_block_name="Node"):
     ipv6_ipam_id: Optional[str] = None
 
 
-class NodeProvisioningBlock(NodeInactiveBlock, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
+class NodeBlockProvisioning(NodeBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Node Enrollment with optional fields to use in the provisioning lifecycle state."""
 
     # In the Provisioning state, there will be an ESDB node, Device Group, and NSO service assigned
@@ -29,7 +29,7 @@ class NodeProvisioningBlock(NodeInactiveBlock, lifecycle=[SubscriptionLifecycle.
     ipv6_ipam_id: str
 
 
-class NodeBlock(NodeProvisioningBlock, lifecycle=[SubscriptionLifecycle.ACTIVE]):
+class NodeBlock(NodeBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     """Node  with optional fields to use in the active lifecycle state."""
 
     # In the active state, there will be an ESDB node, Device Group, and NSO service assigned

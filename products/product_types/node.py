@@ -1,10 +1,10 @@
 from orchestrator.domain.base import SubscriptionModel
 from orchestrator.types import SubscriptionLifecycle
 
-from product_blocks.node import (
+from products.product_blocks.node import (
     NodeBlock,
-    NodeInactiveBlock,
-    NodeProvisioningBlock,
+    NodeBlockInactive,
+    NodeBlockProvisioning,
 )
 
 # In here, we define the values expected for a product block at each phase of the of the Subscription Lifecycle
@@ -14,14 +14,16 @@ from product_blocks.node import (
 
 class NodeInactive(SubscriptionModel, is_base=True):
     # Node state is planned
-    node: NodeInactiveBlock
+    node: NodeBlockInactive
 
 
-class NodeProvisioning(NodeInactiveBlock, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
+class NodeProvisioning(
+    NodeInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
+):
     # Node state is Commissioning
-    node: NodeProvisioningBlock
+    node: NodeBlockProvisioning
 
 
-class Node(NodeProvisioningBlock, lifecycle=[SubscriptionLifecycle.ACTIVE]):
+class Node(NodeProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     # Node state is Provisioned
     node: NodeBlock

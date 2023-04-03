@@ -3,7 +3,8 @@ from uuid import UUID
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle
-from node import Node
+from orchestrator.forms.validators import Choice
+from products.product_blocks.node import NodeBlock, NodeBlockInactive, NodeBlockProvisioning 
 # Product Block definitions for Backbone Link Service
 
 # Constrained lists for models
@@ -33,7 +34,7 @@ class PortInactive(ProductBlockModel, product_block_name="Port"):
 
     port_id: int
     port_description: str
-    node: Node
+    node: NodeBlockInactive
 
 
 class PortProvisioning(
@@ -43,7 +44,7 @@ class PortProvisioning(
 
     port_id: int
     port_description: str
-    node: Node
+    node: NodeBlockProvisioning
 
 
 class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
@@ -51,7 +52,7 @@ class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
 
     port_id: int
     port_description: str
-    node: Node
+    node: NodeBlock
 
 
 # Layer 3 Interface
@@ -60,6 +61,7 @@ class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
 class Layer3InterfaceInactive(ProductBlockModel, product_block_name="Layer 3 Interface"):
     """Object model for a Layer 3 Interface as used by Circuit"""
 
+    port: PortInactive
     v6_ip_address: str
 
 
@@ -68,19 +70,21 @@ class Layer3InterfaceProvisioning(
 ):
     """Layer 3 Interface with fields for use in the provisioning lifecycle"""
 
+    port: PortProvisioning
     v6_ip_address: str
 
 
 class Layer3Interface(Layer3InterfaceProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     """Layer 3 Interface with fields for use in the active lifecycle"""
 
+    port: Port
     v6_ip_address: str
 
 
 # Circuit Block
 
 
-class CircuitInactive(ProductBlockModel, product_block_name="Circuit"):
+class CircuitBlockInactive(ProductBlockModel, product_block_name="Circuit"):
     """Object model for a Circuit as used by
     Backbone Link Service"""
 
@@ -89,7 +93,7 @@ class CircuitInactive(ProductBlockModel, product_block_name="Circuit"):
     admin_state: CircuitState
 
 
-class CircuitProvisioning(CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
+class CircuitBlockProvisioning(CircuitBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Circuit with fields for use in the provisioning lifecycle"""
 
     members: ListOfMembers[Layer3Interface]
@@ -97,7 +101,7 @@ class CircuitProvisioning(CircuitInactive, lifecycle=[SubscriptionLifecycle.PROV
     admin_state: CircuitState
 
 
-class Circuit(CircuitProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
+class CircuitBlock(CircuitBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     """Circuit with fields for use in the active lifecycle"""
 
     members: ListOfMembers[Layer3Interface]
