@@ -14,17 +14,20 @@ from product_blocks.circuit import (
 
 class CircuitInactive(SubscriptionModel, is_base=True):
     # Equipment state is planned
+    # speed = fixed input & is string
     speed: str
     ckt: CircuitInactive
     
     
 class CircuitProvisioning(CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     # Equipment state is Commissioning
+    # speed = fixed input & is string
     speed: str
     ckt: CircuitProvisioning
     
     
 class Circuit(CircuitProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     # Equipment state is Provisioned
+    # speed = fixed input & is string
     speed: str
     ckt: Circuit

@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import TypeVar, Optional
 from uuid import UUID
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
@@ -85,7 +85,7 @@ class CircuitInactive(ProductBlockModel, product_block_name="Circuit"):
     Backbone Link Service"""
 
     members: ListOfMembers[Layer3Interface]
-    circuit_id: int
+    circuit_id: Optional[int]
     admin_state: CircuitState
 
 
