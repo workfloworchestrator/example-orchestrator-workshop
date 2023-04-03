@@ -15,8 +15,8 @@ class NodeInactive(ProductBlockModel, product_block_name="Node"):
     # when first created we expect all resources to be none
     node_id: Optional[int] = None
     node_name: Optional[str] = None
-    nso_service_id: Optional[UUID] = None
-    v6_loopback: Optional[str] = None
+    ipv4_ipam_id: Optional[UUID] = None
+    ipv6_ipam_id: Optional[str] = None
 
 
 class NodeProvisioning(NodeInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
@@ -25,8 +25,8 @@ class NodeProvisioning(NodeInactive, lifecycle=[SubscriptionLifecycle.PROVISIONI
     # In the Provisioning state, there will be an ESDB node, Device Group, and NSO service assigned
     node_id: int
     node_name: str
-    nso_service_id: UUID
-    v6_loopback: str
+    ipv4_ipam_id: UUID
+    ipv6_ipam_id: str
 
 
 class Node(NodeProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
@@ -36,5 +36,5 @@ class Node(NodeProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     node_id: int
     esdb_node_uuid: UUID
     node_name: str
-    nso_service_id: UUID
-    v6_loopback: str
+    ipv4_ipam_id: UUID
+    ipv6_ipam_id: str
