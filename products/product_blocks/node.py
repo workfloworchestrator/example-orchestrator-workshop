@@ -9,8 +9,8 @@ from orchestrator.types import SubscriptionLifecycle
 # expected types
 
 
-class NodeInactive(ProductBlockModel, product_block_name="Node Enrollment"):
-    """Object model for a Node Enrollment as used by Node Enrollment Service"""
+class NodeInactive(ProductBlockModel, product_block_name="Node"):
+    """Object model for a Node as used by Node Service"""
 
     # when first created we expect all resources to be none
     node_id: Optional[int] = None
