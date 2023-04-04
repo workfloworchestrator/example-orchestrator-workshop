@@ -12,8 +12,6 @@ from products.product_blocks.node import (
 
 # Product Block definitions for Circuit Service
 
-# Constrained lists for models
-
 T = TypeVar("T", covariant=True)
 
 
@@ -56,8 +54,6 @@ class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
 
 
 # Layer 3 Interface
-
-
 class Layer3InterfaceInactive(
     ProductBlockModel, product_block_name="Layer 3 Interface"
 ):
@@ -86,8 +82,6 @@ class Layer3Interface(
 
 
 # Circuit Block
-
-
 class CircuitBlockInactive(ProductBlockModel, product_block_name="Circuit"):
     """Object model for a Circuit as used by
     Backbone Link Service"""
