@@ -66,15 +66,11 @@ def construct_node_model(
 def fetch_ip_address_information(
     subscription: NodeInactive,
 ) -> State:
-    detailed_node = netbox.dcim.get_devices(name=subscription.node.node_name)
-    v4_network = ipaddress.ip_network(
-        detailed_node[0].get("primary_ip4").get("address")
-    )
-    subscription.node.ipv4_loopback = v4_network.network_address
-    v6_network = ipaddress.ip_network(
-        detailed_node[0].get("primary_ip6").get("address")
-    )
-    subscription.node.ipv6_loopback = v6_network.network_address
+    detailed_node = next(netbox.dcim.get_devices(name=subscription.node.node_name))
+    v4_network = ipaddress.ip_network(detailed_node.get("primary_ip4").get("address"))
+    subscription.node.ipv4_loopback = ipaddress.IPv4Address(v4_network.network_address)
+    v6_network = ipaddress.ip_network(detailed_node.get("primary_ip6").get("address"))
+    subscription.node.ipv6_loopback = ipaddress.IPv6Address(v6_network.network_address)
 
     return {"subscription": subscription}
 
