@@ -22,7 +22,6 @@ class NodeBlockInactive(ProductBlockModel, product_block_name="Node"):
 class NodeBlockProvisioning(NodeBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Node Enrollment with optional fields to use in the provisioning lifecycle state."""
 
-    # In the Provisioning state, there will be an ESDB node, Device Group, and NSO service assigned
     node_id: int
     node_name: str
     ipv4_ipam_id: str
@@ -32,7 +31,6 @@ class NodeBlockProvisioning(NodeBlockInactive, lifecycle=[SubscriptionLifecycle.
 class NodeBlock(NodeBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     """Node  with optional fields to use in the active lifecycle state."""
 
-    # In the active state, there will be an ESDB node, Device Group, and NSO service assigned
     node_id: int
     node_name: str
     ipv4_ipam_id: str
