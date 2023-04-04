@@ -1,24 +1,24 @@
 version: "3.9"
 
-x-netbox: &netbox
-    image: docker.io/netboxcommunity/netbox:${VERSION-v3.4-2.5.2}
-    depends_on:
+x-netbox:
+  &netbox
+  image: docker.io/netboxcommunity/netbox:${VERSION-v3.4-2.5.2}
+  depends_on:
     - postgres
     - redis
-    env_file: ./etc/netbox/netbox.env
-    user: 'unit:root'
-    healthcheck:
-      start_period: 60s
-      timeout: 3s
-      interval: 15s
-      test: "curl -f http://localhost:8080/api/ || exit 1"
-    volumes:
-      - ./etc/netbox/configuration:/etc/netbox/config:z,ro
-      - ./etc/netbox/reports:/etc/netbox/reports:z,ro
-      - ./etc/netbox/scripts:/etc/netbox/scripts:z,ro
-      - netbox-media-files:/opt/netbox/netbox/media:z
-      - ./etc/netbox/data.json:/etc/netbox/data.json
-
+  env_file: ./etc/netbox/netbox.env
+  user: 'unit:root'
+  healthcheck:
+    start_period: 60s
+    timeout: 3s
+    interval: 15s
+    test: "curl -f http://localhost:8080/api/ || exit 1"
+  volumes:
+    - ./etc/netbox/configuration:/etc/netbox/config:z,ro
+    - ./etc/netbox/reports:/etc/netbox/reports:z,ro
+    - ./etc/netbox/scripts:/etc/netbox/scripts:z,ro
+    - netbox-media-files:/opt/netbox/netbox/media:z
+    - ./etc/netbox/data.json:/etc/netbox/data.json
 
 services:
   #
@@ -36,7 +36,15 @@ services:
       - db-data:/var/lib/postgresql/data/
       - ./etc/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD", "pg_isready", "--username", "nwa", "--dbname", "orchestrator-core"]
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "--username",
+          "nwa",
+          "--dbname",
+          "orchestrator-core"
+        ]
       interval: "3s"
       timeout: "2s"
       retries: 20
@@ -45,12 +53,12 @@ services:
   redis:
     image: docker.io/redis:7-alpine
     command:
-    - sh
-    - -c # this is to evaluate the $REDIS_PASSWORD from the env
-    - redis-server --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
+      - sh
+      - -c # this is to evaluate the $REDIS_PASSWORD from the env
+      - redis-server --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
     env_file: ./etc/redis/redis.env
     volumes:
-    - netbox-redis-cache-data:/data
+      - netbox-redis-cache-data:/data
 
   #
   # Netbox
@@ -58,7 +66,7 @@ services:
   netbox:
     <<: *netbox
     ports:
-      - "8081:8080"
+      - "8000:8080"
 
   netbox-worker:
     <<: *netbox
@@ -66,9 +74,9 @@ services:
       netbox:
         condition: service_healthy
     command:
-    - /opt/netbox/venv/bin/python
-    - /opt/netbox/netbox/manage.py
-    - rqworker
+      - /opt/netbox/venv/bin/python
+      - /opt/netbox/netbox/manage.py
+      - rqworker
     healthcheck:
       start_period: 20s
       timeout: 3s
@@ -81,7 +89,7 @@ services:
       netbox:
         condition: service_healthy
     command:
-    - /opt/netbox/housekeeping.sh
+      - /opt/netbox/housekeeping.sh
     healthcheck:
       start_period: 20s
       timeout: 3s
@@ -100,7 +108,8 @@ services:
       orchestrator:
         condition: service_started
 
-  orchestrator: &orchestrator
+  orchestrator:
+    &orchestrator
     image: "ghcr.io/workfloworchestrator/orchestrator-core:${CORE_VERSION:-latest}"
     environment:
       DATABASE_URI: postgresql://nwa:nwa@postgres/orchestrator-core
