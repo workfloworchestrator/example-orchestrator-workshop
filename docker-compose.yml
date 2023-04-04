@@ -27,7 +27,7 @@ services:
   # Shared
   #
   postgres:
-    image: 'postgres:15'
+    image: 'postgres:13'
     ports:
       - "5432:5432"
     environment:
@@ -113,7 +113,7 @@ services:
 
   orchestrator:
     &orchestrator
-    image: "ghcr.io/workfloworchestrator/orchestrator-core:${CORE_VERSION:-latest}"
+    image: "ghcr.io/workfloworchestrator/orchestrator-core:edge"
     environment:
       DATABASE_URI: postgresql://nwa:nwa@postgres/orchestrator-core
       ENABLE_WEBSOCKETS: "True"
