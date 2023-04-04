@@ -16,9 +16,7 @@ class NodeInactive(SubscriptionModel, is_base=True):
     node: NodeBlockInactive
 
 
-class NodeProvisioning(
-    NodeInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class NodeProvisioning(NodeInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     node: NodeBlockProvisioning
 
 
