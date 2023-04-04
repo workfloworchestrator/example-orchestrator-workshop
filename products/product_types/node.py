@@ -13,17 +13,14 @@ from products.product_blocks.node import (
 
 
 class NodeInactive(SubscriptionModel, is_base=True):
-    # Node state is planned
     node: NodeBlockInactive
 
 
 class NodeProvisioning(
     NodeInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
 ):
-    # Node state is Commissioning
     node: NodeBlockProvisioning
 
 
 class Node(NodeProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
-    # Node state is Provisioned
     node: NodeBlock

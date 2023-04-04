@@ -12,6 +12,7 @@ from pydantic import validator
 from products.product_types.node import NodeInactive
 
 from ..shared import CUSTOMER_UUID, create_workflow
+from utils import netbox
 
 logger = structlog.get_logger(__name__)
 
@@ -22,8 +23,7 @@ def validate_node(node_name: str) -> str:
 
 
 def get_nodes_list() -> List[Dict[str, Any]]:
-    # TODO: get nodes from netbox
-    pass
+    return netbox.dcim.get_devices()
 
 
 def initial_input_form_generator(product_name: str) -> FormGenerator:

@@ -20,14 +20,12 @@ class CircuitInactive(SubscriptionModel, is_base=True):
     
     
 class CircuitProvisioning(CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
-    # Equipment state is Commissioning
     # speed = fixed input & is string
     speed: str
     ckt: CircuitBlockProvisioning
     
     
 class Circuit(CircuitProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
-    # Equipment state is Provisioned
     # speed = fixed input & is string
     speed: str
     ckt: CircuitBlock
