@@ -68,12 +68,8 @@ services:
   netbox:
     <<: *netbox
     ports:
-<<<<<<< Updated upstream
       - "8000:8080"
-=======
-      - "8081:8080"
     entrypoint: ["/opt/netbox/docker-entrypoint.sh", "/etc/netbox/entrypoint.sh"]
->>>>>>> Stashed changes
 
   netbox-worker:
     <<: *netbox
@@ -125,6 +121,7 @@ services:
       - "8080:8080"
     volumes:
       - .:/home/orchestrator
+    entrypoint: ["/home/orchestrator/etc/orchestrator/entrypoint.sh"]
     depends_on:
       postgres:
         condition: service_healthy
