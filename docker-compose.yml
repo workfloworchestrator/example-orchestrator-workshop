@@ -17,8 +17,10 @@ x-netbox:
     - ./etc/netbox/configuration:/etc/netbox/config:z,ro
     - ./etc/netbox/reports:/etc/netbox/reports:z,ro
     - ./etc/netbox/scripts:/etc/netbox/scripts:z,ro
+    - ./etc/netbox/entrypoint.sh:/etc/netbox/entrypoint.sh
     - netbox-media-files:/opt/netbox/netbox/media:z
     - ./etc/netbox/data.json:/etc/netbox/data.json
+
 
 services:
   #
@@ -66,7 +68,12 @@ services:
   netbox:
     <<: *netbox
     ports:
+<<<<<<< Updated upstream
       - "8000:8080"
+=======
+      - "8081:8080"
+    entrypoint: ["/opt/netbox/docker-entrypoint.sh", "/etc/netbox/entrypoint.sh"]
+>>>>>>> Stashed changes
 
   netbox-worker:
     <<: *netbox
