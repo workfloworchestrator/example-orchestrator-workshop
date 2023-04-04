@@ -45,7 +45,11 @@ A user will typically subscribe to a product and the orchestrator will manage li
 ![bg left:33% 70%](img/pdca.jpg)
 
 ---
+## What is a product?
+A product is a hierachical model of a resource. It can be a network resource, but it could also be something else like a User, or a VM or something completely different like a car.
 
-Orchestration is more about data sanity and data management, than about provisioning services.
+Typically a product would be an item that would need to have ownership attributed to it.
+
 
 ---
+
