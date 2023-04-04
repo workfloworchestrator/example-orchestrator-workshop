@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from ipaddress import IPv4Address, IPv6Address
+import ipaddress
 
 import structlog
 from orchestrator.forms import FormPage
@@ -23,7 +23,7 @@ def get_nodes_list() -> List[Dict[str, Any]]:
 
 def initial_input_form_generator(product_name: str) -> FormGenerator:
     nodes = get_nodes_list()
-    choices = [node.name for node in nodes if node.status.value == "planned"]
+    choices = [node.get("name") for node in nodes]  # TODO: filter by node status
     NodeEnum = Choice("NodeEnum", zip(choices, choices))  # type: ignore
 
     class CreateNodeForm(FormPage):
@@ -37,13 +37,13 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
         node for node in nodes if user_input.select_node_choice == node["name"]
     )
 
-    return {"node_id": node_data.id, "node_name": node_data.name}
+    return {"node_id": node_data.get("id"), "node_name": node_data.get("name")}
 
 
 @step("Construct Node model")
 def construct_node_model(
     product: UUIDstr,
-    node_id: str,
+    node_id: int,
     node_name: str,
 ) -> State:
     subscription = NodeInactive.from_product_id(
@@ -56,16 +56,25 @@ def construct_node_model(
     subscription.node.node_name = node_name
     subscription.description = f"Node {node_name} Subscription"
 
-    return {"subscription": subscription}
+    return {
+        "subscription": subscription,
+        "subscription_id": subscription.subscription_id,
+    }
 
 
 @step("Fetch Detailed IP information")
 def fetch_ip_address_information(
-    subscription: NodeProvisioning,
+    subscription: NodeInactive,
 ) -> State:
-    detailed_node = netbox.dcim.devices.get(subscription.node.node_id)
-    subscription.node.ipv4_loopback = detailed_node.primary_ip4.address
-    subscription.node.ipv6_loopback = detailed_node.primary_ip6.address
+    detailed_node = netbox.dcim.get_devices(name=subscription.node.node_name)
+    v4_network = ipaddress.ip_network(
+        detailed_node[0].get("primary_ip4").get("address")
+    )
+    subscription.node.ipv4_loopback = v4_network.network_address
+    v6_network = ipaddress.ip_network(
+        detailed_node[0].get("primary_ip6").get("address")
+    )
+    subscription.node.ipv6_loopback = v6_network.network_address
 
     return {"subscription": subscription}
 
@@ -74,8 +83,9 @@ def fetch_ip_address_information(
 def update_node_status_netbox(
     subscription: NodeProvisioning,
 ) -> State:
-    netbox_device = netbox.dcim.devices.update(
-        [{"id": subscription.node.node_id, "status": "active"}]
+    netbox_device = netbox.dcim.update_device(
+        device_name=subscription.node.node_name,
+        kwargs={"id": subscription.node.node_id, "status": "active"},
     )
     return {"netbox_device": netbox_device}
 
@@ -93,11 +103,11 @@ def add_device(subscription: NodeProvisioning) -> State:
 
 
 @create_workflow(
-    "Enroll Core Router",
+    "Create Node",
     initial_input_form=initial_input_form_generator,
     status=SubscriptionLifecycle.ACTIVE,
 )
-def create_node_enrollment() -> StepList:
+def create_node() -> StepList:
     return (
         begin
         >> construct_node_model
