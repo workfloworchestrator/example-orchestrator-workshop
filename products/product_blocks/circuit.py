@@ -1,9 +1,8 @@
-from typing import TypeVar, Optional
-from uuid import UUID
+from typing import TypeVar
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle
-from orchestrator.forms.validators import Choice
+
 from products.product_blocks.node import (
     NodeBlock,
     NodeBlockInactive,
@@ -20,11 +19,6 @@ class PortPair(SubscriptionInstanceList[T]):
     max_items = 2
 
 
-class CircuitState(Choice):
-    UP = "up"
-    DOWN = "down"
-
-
 # Port
 
 
@@ -32,8 +26,8 @@ class PortInactive(ProductBlockModel, product_block_name="Port"):
     """Object model for a Port as used by
     Circuit Service"""
 
-    port_id: Optional[int]
-    port_description: Optional[str]
+    port_id: int | None = None
+    port_description: str | None = None
     node: NodeBlockInactive
 
 
@@ -60,7 +54,7 @@ class Layer3InterfaceInactive(
     """Object model for a Layer 3 Interface as used by Circuit"""
 
     port: PortInactive
-    v6_ip_address: Optional[str]
+    v6_ip_address: str | None = None
 
 
 class Layer3InterfaceProvisioning(
@@ -87,8 +81,8 @@ class CircuitBlockInactive(ProductBlockModel, product_block_name="Circuit"):
     Backbone Link Service"""
 
     members: PortPair[Layer3InterfaceInactive]
-    circuit_id: Optional[int]
-    admin_state: Optional[CircuitState]
+    circuit_id: int | None = None
+    under_maintenance: bool | None = None
 
 
 class CircuitBlockProvisioning(
@@ -98,7 +92,7 @@ class CircuitBlockProvisioning(
 
     members: PortPair[Layer3InterfaceProvisioning]
     circuit_id: int
-    admin_state: CircuitState
+    under_maintenance: bool
 
 
 class CircuitBlock(CircuitBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
@@ -106,4 +100,4 @@ class CircuitBlock(CircuitBlockProvisioning, lifecycle=[SubscriptionLifecycle.AC
 
     members: PortPair[Layer3Interface]
     circuit_id: int
-    admin_state: CircuitState
+    under_maintenance: bool
