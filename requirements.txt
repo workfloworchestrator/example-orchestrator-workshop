@@ -1,3 +1,2 @@
 debugpy
-pynetbox
 python-netbox
