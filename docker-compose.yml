@@ -115,7 +115,7 @@ services:
 
   orchestrator:
     &orchestrator
-    image: "orch-test:test"
+    image: "ghcr.io/workfloworchestrator/orchestrator-core:edge"
     environment:
       DATABASE_URI: postgresql://nwa:nwa@postgres/orchestrator-core
       ENABLE_WEBSOCKETS: "True"
