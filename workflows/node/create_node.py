@@ -1,43 +1,59 @@
-from typing import Any, Dict, List
+'''Workflow to initially provision a node.'''
+from typing import Any, List
 import ipaddress
 
 import structlog
-from orchestrator.forms import FormPage
-from orchestrator.forms.validators import Choice
+from orchestrator.forms import FormPage, ReadOnlyField
+from orchestrator.forms.validators import Choice, Accept, LongText
 from orchestrator.targets import Target
 from orchestrator.types import FormGenerator, State, SubscriptionLifecycle, UUIDstr
-from orchestrator.workflow import StepList, begin, step
+from orchestrator.workflow import StepList, begin, step, inputstep
 from orchestrator.workflows.steps import set_status, store_process_subscription
-
-from products.product_types.node import NodeInactive, NodeProvisioning, Node
+from orchestrator.config.assignee import Assignee
+from products.product_types.node import NodeInactive, NodeProvisioning
+from utils import netbox
 
 from ..shared import CUSTOMER_UUID, create_workflow
-from utils import netbox
+
 
 logger = structlog.get_logger(__name__)
 
 
-def get_nodes_list() -> List[Dict[str, Any]]:
-    return netbox.dcim.get_devices()
+def get_nodes_list() -> List[Any]:
+    """
+    Connects to netbox and returns a list of netbox device objects.
+    """
+    logger.info("Connecting to Netbox to get list of available nodes")
+    node_list = list(netbox.dcim.devices.all())
+    logger.info(f"Found {len(node_list)} nodes in Netbox")
+    return node_list
 
 
 def initial_input_form_generator(product_name: str) -> FormGenerator:
+    """
+    Generates the Node Form to display to the user.
+    """
+    logger.info("Generating initial input form")
     nodes = get_nodes_list()
-    choices = [node.get("name") for node in nodes]  # TODO: filter by node status
+    choices = [node.name for node in nodes]  # TODO: filter by node status
     NodeEnum = Choice("NodeEnum", zip(choices, choices))  # type: ignore
 
     class CreateNodeForm(FormPage):
+        """FormPage for Creating a node"""
+
         class Config:
+            """Config class for Creating a node"""
+
             title = product_name
 
         select_node_choice: NodeEnum  # type: ignore
 
     user_input = yield CreateNodeForm
     node_data = next(
-        node for node in nodes if user_input.select_node_choice == node["name"]
+        node for node in nodes if user_input.select_node_choice == node.name
     )
 
-    return {"node_id": node_data.get("id"), "node_name": node_data.get("name")}
+    return {"node_id": node_data.id, "node_name": node_data.name}
 
 
 @step("Construct Node model")
@@ -46,6 +62,8 @@ def construct_node_model(
     node_id: int,
     node_name: str,
 ) -> State:
+    """Creates the node model in it's initial state."""
+    logger.info(f"Constructing Node Model for node {node_name}")
     subscription = NodeInactive.from_product_id(
         product_id=product,
         customer_id=CUSTOMER_UUID,
@@ -66,36 +84,63 @@ def construct_node_model(
 def fetch_ip_address_information(
     subscription: NodeInactive,
 ) -> State:
-    detailed_node = next(netbox.dcim.get_devices(name=subscription.node.node_name))
-    v4_network = ipaddress.ip_network(detailed_node.get("primary_ip4").get("address"))
+    """Grabs the IP address information for the node and puts it on the domain model."""
+    logger.info(
+        f"Fetching detailed IP information for node {subscription.node.node_name} from netbox."
+    )
+    detailed_node = netbox.dcim.devices.get(name=subscription.node.node_name)
+    v4_network = ipaddress.ip_network(detailed_node.primary_ip4.address)
     subscription.node.ipv4_loopback = ipaddress.IPv4Address(v4_network.network_address)
-    v6_network = ipaddress.ip_network(detailed_node.get("primary_ip6").get("address"))
+    v6_network = ipaddress.ip_network(detailed_node.primary_ip6.address)
     subscription.node.ipv6_loopback = ipaddress.IPv6Address(v6_network.network_address)
 
     return {"subscription": subscription}
+
+
+@inputstep("Provide Config to User", assignee=Assignee.SYSTEM)
+def provide_config_to_user(subscription: NodeProvisioning) -> FormGenerator:
+    """Generates a configuration payload that a user can paste into a router."""
+    logger.info(f"Creating node payload for {subscription.node.node_name}")
+    dry_run_results = f"""! Paste the following config into {subscription.node.node_name}:
+! to complete configuring the device
+!
+enable
+configure terminal
+!
+hostname {subscription.node.node_name}
+!
+interface loopback 0
+!
+ip address {subscription.node.ipv4_loopback} 255.255.255.55
+ipv6 address {subscription.node.ipv6_loopback}/128
+!
+exit
+!
+end
+copy running-config startup-config"""
+
+    class ConfigResults(FormPage):
+        """FormPage for showing a user the config needed for a node"""
+
+        confirmation_results: LongText = ReadOnlyField(dry_run_results)
+        confirm_dry_run_results: Accept = Accept("INCOMPLETE")
+
+    form_data = yield ConfigResults
+    user_input = form_data.dict()
+    return user_input
 
 
 @step("Update Node Data in Netbox")
 def update_node_status_netbox(
     subscription: NodeProvisioning,
 ) -> State:
-    netbox_device = netbox.dcim.update_device(
-        device_name=subscription.node.node_name,
-        kwargs={"id": subscription.node.node_id, "status": "active"},
-    )
-    return {"netbox_device": netbox_device}
-
-
-@step("POST node")
-def add_device(subscription: NodeProvisioning) -> State:
-    payload = {
-        "id": subscription.node.node_id,
-        "name": subscription.node.node_name,
-        "v4_loopback": subscription.node.ipv4_loopback,
-        "v6_loopback": subscription.node.ipv6_loopback,
-    }
-    # POST to wherever you would like this payload
-    return {"payload": payload}
+    """Updates a node in netbox to be Active"""
+    logger.info(f"Updating Node status in netbox for {subscription.node.node_name}")
+    device = netbox.dcim.devices.get(name=subscription.node.node_name)
+    device.status = "active"
+    if not device.save():
+        raise RuntimeError(f"Could not save device status {device.__dict__}")
+    return {"netbox_device": device.name}
 
 
 @create_workflow(
@@ -104,12 +149,13 @@ def add_device(subscription: NodeProvisioning) -> State:
     status=SubscriptionLifecycle.ACTIVE,
 )
 def create_node() -> StepList:
+    '''Workflow steplist'''
     return (
         begin
         >> construct_node_model
         >> store_process_subscription(Target.CREATE)
         >> fetch_ip_address_information
+        >> provide_config_to_user
         >> set_status(SubscriptionLifecycle.PROVISIONING)
-        >> add_device
         >> update_node_status_netbox
     )

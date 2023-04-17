@@ -1,8 +1,6 @@
-from netbox import NetBox  # type: ignore
+import pynetbox # type: ignore
 
-netbox = NetBox(
-    host="netbox",
-    port=8080,
-    use_ssl=False,
-    auth_token="e744057d755255a31818bf74df2350c26eeabe54",
+netbox = pynetbox.api(
+    'http://netbox:8080',
+    token='e744057d755255a31818bf74df2350c26eeabe54'
 )
