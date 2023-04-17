@@ -1,4 +1,4 @@
-'''Workflow to initially provision a node.'''
+"""Workflow to initially provision a node."""
 from typing import Any, List
 import ipaddress
 
@@ -149,7 +149,7 @@ def update_node_status_netbox(
     status=SubscriptionLifecycle.ACTIVE,
 )
 def create_node() -> StepList:
-    '''Workflow steplist'''
+    """Workflow steplist"""
     return (
         begin
         >> construct_node_model
