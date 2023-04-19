@@ -59,7 +59,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     """
     logger.info("Generating initial input form for Circuit")
     valid_circuits = get_valid_cables_list()
-    pretty_circuits = format_circuits(valid_circuits)
+    pretty_circuits = list(format_circuits(valid_circuits))
     choices = [node[1] for node in pretty_circuits]
     CircuitEnum = Choice("CircuitEnum", zip(choices, choices))
 
@@ -74,20 +74,28 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
         select_node_choice: CircuitEnum  # type: ignore
 
     user_input = yield CreateCircuitForm
+    logger.info(f"User selected circuit/cable {user_input.select_node_choice}")
     circuit_data = next(
-        node for node in pretty_circuits if user_input.select_node_choice == node[1]
+        node[0] for node in pretty_circuits if user_input.select_node_choice == node[1]
     )
+    logger.info(f'circuit data is: {circuit_data.__dict__}')
 
-    return {"circuit_id": circuit_data[0].id}
+
+    return {"circuit_id": circuit_data.id, "speed": 100}
 
 
-@step("Construct Node model")
-def construct_circuit_model(
-    product: UUIDstr,
-    node_id: int,
-    node_name: str,
-) -> State:
-    pass
+@step("Construct Circuit model")
+def construct_circuit_model(product: UUIDstr, speed: int) -> State:
+    subscription = CircuitInactive.from_product_id(
+        product_id=product,
+        customer_id=CUSTOMER_UUID,
+        status=SubscriptionLifecycle.INITIAL,
+    )
+    subscription.speed = speed
+    return {
+        "subscription": subscription,
+        "subscription_id": subscription.subscription_id,
+    }
 
 
 @step("Reserve IPs in Netbox")
@@ -125,3 +133,6 @@ def create_circuit() -> StepList:
         >> set_status(SubscriptionLifecycle.PROVISIONING)
         >> update_circuit_status_netbox
     )
+# test
+#test
+#test

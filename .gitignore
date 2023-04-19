@@ -468,3 +468,8 @@ fabric.properties
 !.idea/runConfigurations
 
 # End of https://www.toptal.com/developers/gitignore/api/jetbrains+all
+
+
+# BASH
+
+.bash_history
