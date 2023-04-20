@@ -1,6 +1,5 @@
-from enum import Enum
 from orchestrator.domain.base import SubscriptionModel
-from orchestrator.types import SubscriptionLifecycle
+from orchestrator.types import strEnum, SubscriptionLifecycle
 
 from products.product_blocks.circuit import (
     CircuitBlock,
@@ -13,22 +12,23 @@ from products.product_blocks.circuit import (
 # expected types
 
 
+class Speed(strEnum):
+    HUNDREDG = "100G"
+
+
 class CircuitInactive(SubscriptionModel, is_base=True):
     # Equipment state is planned
-    # speed = fixed input & is string
-    speed: Enum
+    speed: Speed
     ckt: CircuitBlockInactive
 
 
 class CircuitProvisioning(
     CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
 ):
-    # speed = fixed input & is string
-    speed: Enum
+    speed: Speed
     ckt: CircuitBlockProvisioning
 
 
 class Circuit(CircuitProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
-    # speed = fixed input & is string
-    speed: Enum
+    speed: Speed
     ckt: CircuitBlock

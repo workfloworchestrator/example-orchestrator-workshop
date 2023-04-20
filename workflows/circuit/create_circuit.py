@@ -80,17 +80,16 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     )
     logger.info(f"circuit data is: {circuit_data.__dict__}")
 
-    return {"circuit_id": circuit_data.id, "speed": 100}
+    return {"circuit_id": circuit_data.id}
 
 
 @step("Construct Circuit model")
-def construct_circuit_model(product: UUIDstr, speed: int) -> State:
+def construct_circuit_model(product: UUIDstr) -> State:
     subscription = CircuitInactive.from_product_id(
         product_id=product,
         customer_id=CUSTOMER_UUID,
         status=SubscriptionLifecycle.INITIAL,
     )
-    subscription.speed = speed
     return {
         "subscription": subscription,
         "subscription_id": subscription.subscription_id,
