@@ -78,8 +78,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     circuit_data = next(
         node[0] for node in pretty_circuits if user_input.select_node_choice == node[1]
     )
-    logger.info(f'circuit data is: {circuit_data.__dict__}')
-
+    logger.info(f"circuit data is: {circuit_data.__dict__}")
 
     return {"circuit_id": circuit_data.id, "speed": 100}
 
@@ -133,6 +132,8 @@ def create_circuit() -> StepList:
         >> set_status(SubscriptionLifecycle.PROVISIONING)
         >> update_circuit_status_netbox
     )
+
+
 # test
-#test
-#test
+# test
+# test
