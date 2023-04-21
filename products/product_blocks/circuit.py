@@ -3,11 +3,7 @@ from typing import TypeVar
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle
 
-from products.product_blocks.node import (
-    NodeBlock,
-    NodeBlockInactive,
-    NodeBlockProvisioning,
-)
+from products.product_blocks.node import NodeBlock
 
 # Product Block definitions for Circuit Service
 
@@ -28,7 +24,7 @@ class PortInactive(ProductBlockModel, product_block_name="Port"):
 
     port_id: int | None = None
     port_description: str | None = None
-    node: NodeBlockInactive
+    node: NodeBlock | None = None
 
 
 class PortProvisioning(PortInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
@@ -36,7 +32,7 @@ class PortProvisioning(PortInactive, lifecycle=[SubscriptionLifecycle.PROVISIONI
 
     port_id: int
     port_description: str
-    node: NodeBlockProvisioning
+    node: NodeBlock
 
 
 class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
