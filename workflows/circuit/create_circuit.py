@@ -11,6 +11,10 @@ from orchestrator.workflow import StepList, begin, step, inputstep
 from orchestrator.workflows.steps import set_status, store_process_subscription
 from orchestrator.config.assignee import Assignee
 from products.product_types.circuit import CircuitInactive, CircuitProvisioning
+from products.product_types.node import Node
+from orchestrator.services.subscriptions import (
+    retrieve_subscription_by_subscription_instance_value,
+)
 from utils import netbox
 
 from ..shared import CUSTOMER_UUID, create_workflow
@@ -84,12 +88,36 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
 
 
 @step("Construct Circuit model")
-def construct_circuit_model(product: UUIDstr) -> State:
+def construct_circuit_model(
+    product: UUIDstr,
+    state: State,
+) -> State:
+    logger.info("Building initial circuit model")
+
     subscription = CircuitInactive.from_product_id(
         product_id=product,
         customer_id=CUSTOMER_UUID,
         status=SubscriptionLifecycle.INITIAL,
     )
+
+    logger.info("Adding Node to Subscription")
+    node_a_netbox_id = "7"  # TODO: Retreive this from netbox
+    node_a_subscription = retrieve_subscription_by_subscription_instance_value(
+        resource_type="node_id", value=node_a_netbox_id
+    )
+
+    node_b_netbox_id = "8"  # TODO: Retreive this from netbox
+    node_b_subscription = retrieve_subscription_by_subscription_instance_value(
+        resource_type="node_id", value=node_b_netbox_id
+    )
+
+    subscription.ckt.members[0].port.node = Node.from_subscription(
+        node_a_subscription.subscription_id
+    ).node
+    subscription.ckt.members[1].port.node = Node.from_subscription(
+        node_b_subscription.subscription_id
+    ).node
+
     return {
         "subscription": subscription,
         "subscription_id": subscription.subscription_id,
@@ -100,6 +128,7 @@ def construct_circuit_model(product: UUIDstr) -> State:
 def reserve_ips_in_ipam(
     subscription: CircuitInactive,
 ) -> State:
+    logger.info("Reserving IPs in NetBox")
     pass
 
 
@@ -131,8 +160,3 @@ def create_circuit() -> StepList:
         >> set_status(SubscriptionLifecycle.PROVISIONING)
         >> update_circuit_status_netbox
     )
-
-
-# test
-# test
-# test
