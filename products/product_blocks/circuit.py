@@ -1,4 +1,5 @@
 from typing import TypeVar
+from ipaddress import IPv6Interface
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle
@@ -50,7 +51,7 @@ class Layer3InterfaceInactive(
     """Object model for a Layer 3 Interface as used by Circuit"""
 
     port: PortInactive
-    v6_ip_address: str | None = None
+    v6_ip_address: IPv6Interface | None = None
 
 
 class Layer3InterfaceProvisioning(
@@ -59,7 +60,7 @@ class Layer3InterfaceProvisioning(
     """Layer 3 Interface with fields for use in the provisioning lifecycle"""
 
     port: PortProvisioning
-    v6_ip_address: str
+    v6_ip_address: IPv6Interface
 
 
 class Layer3Interface(
@@ -68,7 +69,7 @@ class Layer3Interface(
     """Layer 3 Interface with fields for use in the active lifecycle"""
 
     port: Port
-    v6_ip_address: str
+    v6_ip_address: IPv6Interface
 
 
 # Circuit Block

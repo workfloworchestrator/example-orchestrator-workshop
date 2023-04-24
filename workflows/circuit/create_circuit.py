@@ -22,6 +22,7 @@ from ..shared import CUSTOMER_UUID, create_workflow
 
 logger = structlog.get_logger(__name__)
 
+CIRCUIT_PREFIX_IPAM_ID = 3
 
 def get_valid_cables_list() -> List[Any]:
     """
@@ -129,7 +130,28 @@ def reserve_ips_in_ipam(
     subscription: CircuitInactive,
 ) -> State:
     logger.info("Reserving IPs in NetBox")
-    pass
+    circuit_block_prefix = netbox.ipam.prefixes.get(CIRCUIT_PREFIX_IPAM_ID)
+    current_circuit_prefix_64 = circuit_block_prefix.available_prefixes.create({"prefix_length": 64, "description": "foo", "is_pool": "on"}) #TODO: Set Description for prefix
+    current_circuit_prefix_127 = current_circuit_prefix_64.available_prefixes.create({"prefix_length": 127, "description": "foo", "is_pool": "on"}) #TODO: Set Description for prefix
+    a_side_ip = current_circuit_prefix_127.available_ips.create({"description": "foo"}) #TODO: Set Description for IP, add to device and interface, then set status to planning
+    b_side_ip = current_circuit_prefix_127.available_ips.create({"description": "foo"}) #TODO: Set Description for IP, add to device and interface, then set status to planning
+
+    subscription.ckt.members[0].v6_ip_address = a_side_ip
+    subscription.ckt.members[1].v6_ip_address = b_side_ip
+
+
+    # TODO Move to new step
+    subscription.ckt.members[0].port.port_id = 1
+    subscription.ckt.members[0].port.port_description = "something"
+
+    subscription.ckt.members[1].port.port_id = 1
+    subscription.ckt.members[1].port.port_description = "something"
+    subscription.ckt.circuit_id = 1
+    subscription.ckt.under_maintenance = True
+
+    logger.info("Finished reserving IPs in NetBox")
+
+    return {"subscription": subscription}
 
 
 @inputstep("Provide Config to User", assignee=Assignee.SYSTEM)
@@ -144,6 +166,15 @@ def update_circuit_status_netbox(
     pass
 
 
+@step("Update Subscription Description")
+def update_subscription_description(
+    subscription: CircuitInactive,
+) -> State:
+    subscription.description = f"Circuit {subscription.ckt.circuit_id} Subscription"
+
+    return {"subscription": subscription}
+
+
 @create_workflow(
     "Create Circuit",
     initial_input_form=initial_input_form_generator,
@@ -156,7 +187,8 @@ def create_circuit() -> StepList:
         >> construct_circuit_model
         >> store_process_subscription(Target.CREATE)
         >> reserve_ips_in_ipam
-        >> provide_config_to_user
-        >> set_status(SubscriptionLifecycle.PROVISIONING)
-        >> update_circuit_status_netbox
+        # >> provide_config_to_user
+        # >> set_status(SubscriptionLifecycle.PROVISIONING)
+        # >> update_circuit_status_netbox
+        >> update_subscription_description
     )
