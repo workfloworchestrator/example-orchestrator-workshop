@@ -274,8 +274,7 @@ end
 @inputstep("Provide Config to User", assignee=Assignee.SYSTEM)
 def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
     """
-    Moves the Circuit to the provisioning state and then displays the config to a
-    user so that they can paste it into a router.
+    Renders and displays the config to a user so that they can paste it into a router.
     """
     logger.info(f"Creating circuit payload for Circuit #{subscription.ckt.circuit_id}")
     router_a_config = render_circuit_endpoint_config(
