@@ -101,7 +101,7 @@ def fetch_ip_address_information(
 def provide_config_to_user(subscription: NodeProvisioning) -> FormGenerator:
     """Generates a configuration payload that a user can paste into a router."""
     logger.info(f"Creating node payload for {subscription.node.node_name}")
-    dry_run_results = f"""! Paste the following config into {subscription.node.node_name}:
+    router_config = f"""! Paste the following config into {subscription.node.node_name}:
 ! to complete configuring the device
 !
 enable
@@ -122,8 +122,8 @@ copy running-config startup-config"""
     class ConfigResults(FormPage):
         """FormPage for showing a user the config needed for a node"""
 
-        confirmation_results: LongText = ReadOnlyField(dry_run_results)
-        confirm_dry_run_results: Accept = Accept("INCOMPLETE")
+        confirmation_results: LongText = ReadOnlyField(router_config)
+        confirm_config_put_on_routers: Accept = Accept("INCOMPLETE")
 
     form_data = yield ConfigResults
     user_input = form_data.dict()

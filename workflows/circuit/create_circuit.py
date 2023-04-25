@@ -296,7 +296,7 @@ def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
 
         a_side_router_config: LongText = ReadOnlyField(router_a_config)
         b_side_router_config: LongText = ReadOnlyField(router_b_config)
-        confirm_dry_run_results: Accept = Accept("INCOMPLETE")
+        confirm_config_put_on_routers: Accept = Accept("INCOMPLETE")
 
     logger.info("Presenting ConfigResults Form to user")
     form_data = yield ConfigResults
