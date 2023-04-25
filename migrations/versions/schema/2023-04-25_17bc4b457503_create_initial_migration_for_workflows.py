@@ -1,16 +1,16 @@
-"""add node and circuit create and validate workflows.
+"""Create initial migration for workflows.
 
-Revision ID: ebd8f3b36312
-Revises: 31bd7676d11e
-Create Date: 2023-04-04 14:15:01.848156
+Revision ID: 17bc4b457503
+Revises: 2136d6098238
+Create Date: 2023-04-25 14:48:16.185913
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'ebd8f3b36312'
-down_revision = '31bd7676d11e'
+revision = '17bc4b457503'
+down_revision = '2136d6098238'
 branch_labels = None
 depends_on = None
 
@@ -23,6 +23,12 @@ new_workflows = [
         "target": "CREATE",
         "description": "Create Node",
         "product_type": "Node"
+    },
+    {
+        "name": "create_circuit",
+        "target": "CREATE",
+        "description": "Create Circuit",
+        "product_type": "Circuit"
     }
 ]
 
