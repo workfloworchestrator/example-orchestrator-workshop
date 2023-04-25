@@ -1,8 +1,9 @@
 from orchestrator.types import State, UUIDstr
-from orchestrator.workflow import step, StepList, begin
+from orchestrator.workflow import StepList, begin, step
 from orchestrator.workflows.utils import validate_workflow
-from workflows.shared import is_active
+
 from products.product_types.circuit import Circuit
+from workflows.shared import is_active
 
 
 @step("Load relevant Circuit subscription information")
