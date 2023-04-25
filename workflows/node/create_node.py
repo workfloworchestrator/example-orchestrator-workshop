@@ -24,7 +24,7 @@ def get_nodes_list() -> List[Any]:
     Connects to netbox and returns a list of netbox device objects.
     """
     logger.info("Connecting to Netbox to get list of available nodes")
-    node_list = list(netbox.dcim.devices.all())
+    node_list = list(netbox.dcim.devices.filter(status="planned"))
     logger.info(f"Found {len(node_list)} nodes in Netbox")
     return node_list
 

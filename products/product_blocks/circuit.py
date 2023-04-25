@@ -25,6 +25,7 @@ class PortInactive(ProductBlockModel, product_block_name="Port"):
 
     port_id: int | None = None
     port_description: str | None = None
+    port_name: str | None = None
     node: NodeBlock | None = None
 
 
@@ -33,6 +34,7 @@ class PortProvisioning(PortInactive, lifecycle=[SubscriptionLifecycle.PROVISIONI
 
     port_id: int
     port_description: str
+    port_name: str
     node: NodeBlock
 
 
@@ -41,6 +43,7 @@ class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
 
     port_id: int
     port_description: str
+    port_name: str
     node: NodeBlock
 
 
