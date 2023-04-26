@@ -473,3 +473,4 @@ fabric.properties
 # BASH
 
 .bash_history
+.local
