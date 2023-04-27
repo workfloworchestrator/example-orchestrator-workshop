@@ -46,9 +46,19 @@ def test_create_nodes(products):
     logger.info("Running test_create_node ")
     node_names = ["loc1-core", "loc2-core", "loc3-core", "loc4-core", "loc5-core"]
     for node in node_names:
+        logger.info(f"Attempting to enroll node {node}")
         node_id = create_node(products, node)
         logger.info(f"Node {node} sucessfully enrolled with subscription ID: {node_id}")
-        assert True
+        node_model = get_domain_model(node_id)
+
+        assert node_model["description"] == f"Node {node} Subscription"
+        assert node_model["node"]["node_name"] == node
+
+        assert node_model["node"]["ipv4_loopback"] == f"10.0.0.{node[3]}"
+        assert node_model["node"]["ipv6_loopback"] == f"2001:db8::{node[3]}"
+
+        logger.info(f"All assertions pass for Node Subscription for {node}")
+
 
 def test_create_circuit(products):
     pass
