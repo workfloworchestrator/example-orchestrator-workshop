@@ -1,0 +1,50 @@
+name: Integration tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+env:
+  CORE_VERSION: edge
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Note: Don't do this in production!
+      - name: Map container uid/gid to that of the github runner
+        run: echo "CI_USER=`id -u`:`id -g`" >> $GITHUB_ENV
+
+      - run: docker compose up -d db-upgrade-heads
+
+      - name: Docker compose logs in case of failure
+        run: docker compose logs --timestamps
+        if: ${{ failure() }}
+
+      - name: Wait for db-upgrade-heads to finish
+        run: sleep 15
+
+      - name: Add example migrations
+        run: cp -av examples/????-??-??_*.py migrations/versions/schema
+
+      - run: docker compose up -d
+
+      - name: Docker compose logs in case of failure
+        run: docker compose logs --timestamps
+        if: ${{ failure() }}
+
+      - name: Add orchestrator-core image details to summary
+        run: echo -e "# orchestrator-core image details\n\n\`\`\`json\n`docker compose images orchestrator --format json | jq`\n\`\`\`\n" >> $GITHUB_STEP_SUMMARY
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install pip dependencies
+        run: pip install requests pytest
+
+      - name: Run tests
+        run: pytest tests/integration_tests -vvv
