@@ -32,5 +32,8 @@ jobs:
       - name: Install pip dependencies
         run: pip install requests pytest structlog
 
+      - name: Wait for docker containers to start (Future Person, make this less lame please)
+        run: sleep 60
+
       - name: Run tests
         run: pytest tests/integration_tests -vvv
