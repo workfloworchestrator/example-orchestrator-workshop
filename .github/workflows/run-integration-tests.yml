@@ -24,8 +24,10 @@ jobs:
         run: docker compose logs --timestamps
         if: ${{ failure() }}
 
-      - name: dump docker health logs
+      # IDK why docker compose logs doesn't include this...
+      - name: Dump docker health logs in case of failure
         run: docker inspect --format "{{json .State.Health }}" $(docker compose ps -aq)
+        if: ${{ failure() }}
 
       - name: Add orchestrator-core image details to summary
         run: echo -e "# orchestrator-core image details\n\n\`\`\`json\n`docker compose images orchestrator --format json | jq`\n\`\`\`\n" >> $GITHUB_STEP_SUMMARY
