@@ -17,6 +17,9 @@ jobs:
       - name: Map container uid/gid to that of the github runner
         run: echo "CI_USER=`id -u`:`id -g`" >> $GITHUB_ENV
 
+      - name: Start docker compose
+        run: docker compose up -d
+
       - name: Docker compose logs in case of failure
         run: docker compose logs --timestamps
         if: ${{ failure() }}
