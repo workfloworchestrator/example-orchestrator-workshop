@@ -53,17 +53,22 @@ def wait_process_complete_user_input(process_id: str) -> str:
 
     i = 0
     while not process_result["status"] == "completed":
+        i += 1
         status_response = requests.get(f"{API_URL}/processes/{process_id}")
         process_result = response_to_json(status_response)
+        logger.info(
+            f"PID {process_id} is currently {process_result['status']} after {i} iterations"
+        )
         if process_result["status"] == "suspended":
             logger.info(f"PID {process_id} is currently suspended after {i} iterations")
             resume_workflow(process_id=process_id)
             logger.info(f"PID {process_id} has been resumed after {i} iterations")
         if i >= 10:
-            logger.error("Proccess not completed ater {i} waiting cycles.")
+            logger.error(f"Proccess not completed ater {i} waiting cycles.")
             break
         time.sleep(0.5)
-        i += 1
+
+    assert process_result["status"] == "completed"
 
     logger.info(
         f"PID {process_id} status was successfully completed after {i} iterations"
