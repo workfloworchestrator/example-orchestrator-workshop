@@ -9,7 +9,7 @@ from tests.integration_tests.helpers import API_URL
 
 logger = structlog.get_logger(__name__)
 
-TEST_CLEANUP = False
+TEST_CLEANUP = True
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def products() -> dict[str, str]:
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def get_subscriptions() -> Callable:
     def get() -> dict[str, dict]:
         subscriptions_response = requests.get(f"{API_URL}/subscriptions/all")
@@ -32,7 +32,7 @@ def get_subscriptions() -> Callable:
     return get
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def get_subscription_processes():
     def get(subscription_id: str) -> dict[str, dict]:
         processes_response = requests.get(
@@ -44,7 +44,7 @@ def get_subscription_processes():
     return get
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def clean(get_subscriptions, get_subscription_processes):
     yield
 
