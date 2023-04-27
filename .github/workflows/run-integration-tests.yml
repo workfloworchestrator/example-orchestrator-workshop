@@ -30,7 +30,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install pip dependencies
-        run: pip install requests pytest
+        run: pip install requests pytest structlog
 
       - name: Run tests
         run: pytest tests/integration_tests -vvv
