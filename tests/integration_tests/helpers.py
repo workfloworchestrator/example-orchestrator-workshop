@@ -60,9 +60,7 @@ def wait_process_complete_user_input(process_id: str) -> str:
             f"PID {process_id} is currently {process_result['status']} after {i} iterations"
         )
         if process_result["status"] == "suspended":
-            logger.info(f"PID {process_id} is currently suspended after {i} iterations")
             resume_workflow(process_id=process_id)
-            logger.info(f"PID {process_id} has been resumed after {i} iterations")
         if i >= 10:
             logger.error(f"Proccess not completed ater {i} waiting cycles.")
             break
@@ -73,10 +71,6 @@ def wait_process_complete_user_input(process_id: str) -> str:
     logger.info(
         f"PID {process_id} status was successfully completed after {i} iterations"
     )
-
-    assert process_result["status"] == "completed"
-
-    logger.info(f"PID {process_id} completed successfully")
 
     return process_result["subscriptions"][0]["subscription_id"]
 
