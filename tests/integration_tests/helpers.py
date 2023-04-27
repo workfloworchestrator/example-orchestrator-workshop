@@ -120,15 +120,15 @@ def create_node(products, node_name):
     return subscription_id
 
 
-def create_circuit(products, group_name):
+def create_circuit(products, circuit_name):
     product_id = products["Circuit"]
 
     create_response = requests.post(
-        f"{API_URL}/processes/create_node",
-        json=[{"product": product_id}, {"group_name": group_name}],
+        f"{API_URL}/processes/create_circuit",
+        json=[{"product": product_id}, {"select_circuit_choice": circuit_name}],
     )
     product = response_to_json(create_response)
-    subscription_id = wait_process_complete(product["id"])
+    subscription_id = wait_process_complete_user_input(product["id"])
     return subscription_id
 
 
