@@ -21,7 +21,6 @@ x-netbox:
     - netbox-media-files:/opt/netbox/netbox/media:z
     - ./etc/netbox/data.json:/etc/netbox/data.json
 
-
 services:
   #
   # Shared
@@ -71,7 +70,11 @@ services:
       - "8080"
     ports:
       - "8000:8080"
-    entrypoint: ["/opt/netbox/docker-entrypoint.sh", "/etc/netbox/entrypoint.sh"]
+    entrypoint:
+      [
+        "/opt/netbox/docker-entrypoint.sh",
+        "/etc/netbox/entrypoint.sh"
+      ]
 
   netbox-worker:
     <<: *netbox
@@ -123,8 +126,15 @@ services:
     expose:
       - 5678 #Enable Python debugger
     volumes:
-      - .:/home/orchestrator
-    entrypoint: ["/home/orchestrator/etc/orchestrator/entrypoint.sh"]
+      - ./workflows:/home/orchestrator/workflows
+      - ./products:/home/orchestrator/products
+      - ./migrations:/home/orchestrator/migrations
+      - ./etc:/home/orchestrator/etc
+      - ./main.py:/home/orchestrator/main.py
+      - ./utils.py:/home/orchestrator/utils.py
+      - ./requirements.txt:/home/orchestrator/requirements.txt
+      - ./alembic.ini:/home/orchestrator/alembic.ini
+    entrypoint: [ "/home/orchestrator/etc/orchestrator/entrypoint.sh" ]
     depends_on:
       postgres:
         condition: service_healthy
