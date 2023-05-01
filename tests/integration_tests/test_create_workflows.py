@@ -44,7 +44,7 @@ def test_create_circuit(products):
         "Circuit ID 15: loc3-core:1/1/c5/1 <--> loc5-core:1/1/c3/1",
         "Circuit ID 16: loc4-core:1/1/c5/1 <--> loc5-core:1/1/c4/1",
     ]
-    # node_names = ["loc5-core"]
+    
     for circuit in circuit_names:
         logger.info(f'Attempting to provision Circuit "{circuit}"')
         circuit_sub_id = create_circuit(products, circuit)
