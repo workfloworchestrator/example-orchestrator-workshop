@@ -23,9 +23,9 @@ def get_nodes_list() -> List[Any]:
     """
     Connects to netbox and returns a list of netbox device objects.
     """
-    logger.info("Connecting to Netbox to get list of available nodes")
+    logger.debug("Connecting to Netbox to get list of available nodes")
     node_list = list(netbox.dcim.devices.filter(status="planned"))
-    logger.info(f"Found {len(node_list)} nodes in Netbox")
+    logger.debug("Found nodes in Netbox", amount=len(node_list))
     return node_list
 
 
@@ -33,9 +33,9 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     """
     Generates the Node Form to display to the user.
     """
-    logger.info("Generating initial input form")
+    logger.debug("Generating initial input form")
     nodes = get_nodes_list()
-    choices = [node.name for node in nodes]  # TODO: filter by node status
+    choices = [node.name for node in nodes]
     NodeEnum = Choice("NodeEnum", zip(choices, choices))  # type: ignore
 
     class CreateNodeForm(FormPage):
@@ -63,7 +63,7 @@ def construct_node_model(
     node_name: str,
 ) -> State:
     """Creates the node model in it's initial state."""
-    logger.info(f"Constructing Node Model for node {node_name}")
+    logger.debug("Constructing Node model for node", node_name=node_name)
     subscription = NodeInactive.from_product_id(
         product_id=product,
         customer_id=CUSTOMER_UUID,
@@ -85,8 +85,9 @@ def fetch_ip_address_information(
     subscription: NodeInactive,
 ) -> State:
     """Grabs the IP address information for the node and puts it on the domain model."""
-    logger.info(
-        f"Fetching detailed IP information for node {subscription.node.node_name} from netbox."
+    logger.debug(
+        "Fetching detailed IP information for node from netbox",
+        node_name=subscription.node.node_name,
     )
     detailed_node = netbox.dcim.devices.get(name=subscription.node.node_name)
     v4_network = ipaddress.ip_network(detailed_node.primary_ip4.address)
@@ -100,7 +101,7 @@ def fetch_ip_address_information(
 @inputstep("Provide Config to User", assignee=Assignee.SYSTEM)
 def provide_config_to_user(subscription: NodeProvisioning) -> FormGenerator:
     """Generates a configuration payload that a user can paste into a router."""
-    logger.info(f"Creating node payload for {subscription.node.node_name}")
+    logger.debug("Creating node payload", node_name=subscription.node.node_name)
     router_config = f"""! Paste the following config into {subscription.node.node_name}:
 ! to complete configuring the device
 !
@@ -135,7 +136,9 @@ def update_node_status_netbox(
     subscription: NodeProvisioning,
 ) -> State:
     """Updates a node in netbox to be Active"""
-    logger.info(f"Updating Node status in netbox for {subscription.node.node_name}")
+    logger.debug(
+        "Updating Node status in netbox", node_name=subscription.node.node_name
+    )
     device = netbox.dcim.devices.get(name=subscription.node.node_name)
     device.status = "active"
     if not device.save():

@@ -20,13 +20,13 @@ def response_to_json(response):
 def resume_workflow(
     process_id: str, resume_field: str = "confirm_config_put_on_routers"
 ):
-    logger.info(f"Attempting to resume workflow with PID: {process_id}")
+    logger.debug("Attempting to resume workflow", pid=process_id)
     resume_response = requests.put(
         f"{API_URL}/processes/{process_id}/resume",
         json=[{resume_field: "ACCEPTED"}],
     )
     assert resume_response.ok, f"Response not ok: {resume_response.status_code}"
-    logger.info(f"Successfully resumed workflow with PID: {process_id}")
+    logger.debug("Successfully resumed workflow", pid=process_id)
 
 
 def wait_process_complete(process_id: str) -> str:
@@ -49,28 +49,28 @@ def wait_process_complete_user_input(process_id: str) -> str:
     """Wait for the given process to complete and then return the subscription id."""
     process_result = {"status": None}
 
-    logger.info(f"Waiting for PID {process_id} to complete")
+    logger.debug("Waiting for process to complete", pid=process_id)
 
     i = 0
     while not process_result["status"] == "completed":
         i += 1
         status_response = requests.get(f"{API_URL}/processes/{process_id}")
         process_result = response_to_json(status_response)
-        logger.info(
-            f"PID {process_id} is currently {process_result['status']} after {i} iterations"
+        logger.debug(
+            "Current process status:", status=process_result["status"], iterations=i
         )
         if process_result["status"] == "suspended":
             resume_workflow(process_id=process_id)
         if i >= 10:
-            logger.error(f"Proccess not completed ater {i} waiting cycles.")
+            logger.error(
+                "Proccess not completed after finishing all cycles.", iteration_number=i
+            )
             break
         time.sleep(0.5)
 
     assert process_result["status"] == "completed"
 
-    logger.info(
-        f"PID {process_id} status was successfully completed after {i} iterations"
-    )
+    logger.debug("Process was successfully completed.", pid=process_id, iterations=i)
 
     return process_result["subscriptions"][0]["subscription_id"]
 

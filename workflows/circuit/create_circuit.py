@@ -31,9 +31,9 @@ def get_valid_cables_list() -> List[Any]:
     """
     Connects to netbox and returns a list of valid netbox circuits/cables.
     """
-    logger.info("Connecting to Netbox to get list of available circuits/cables")
+    logger.debug("Connecting to Netbox to get list of available circuits/cables")
     valid_circuits = list(netbox.dcim.cables.filter(status="planned"))
-    logger.info(f"Found {len(valid_circuits)} circuits/cables in Netbox")
+    logger.debug("Found circuits/cables in Netbox", amount=len(valid_circuits))
     return valid_circuits
 
 
@@ -56,7 +56,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     """
     Generates the Circuit Form to display to the user.
     """
-    logger.info("Generating initial input form for Circuit")
+    logger.debug("Generating initial input form for Circuit")
     # TODO: Add validator to make sure that the nodes this circuit depends on already exist.
 
     # First, get the data we need to present a list of circuits to a user
@@ -79,19 +79,21 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
         select_circuit_choice: CircuitEnum  # type: ignore
 
     # Now we present the form to the user
-    logger.info("Presenting CreateCircuitForm to user")
+    logger.debug("Presenting CreateCircuitForm to user")
     user_input = yield CreateCircuitForm
 
     # Once we get the form selecton back from the user we send that circuit ID
     # to the state object for use in generating the subscription
-    logger.info(f"User selected circuit/cable {user_input.select_circuit_choice}")
+    logger.debug(
+        "User selected a circuit/cable", choice=user_input.select_circuit_choice
+    )
     circuit_data = next(
         circuit[0]
         for circuit in pretty_circuits
         if user_input.select_circuit_choice == circuit[1]
     )
 
-    logger.info("Done with CreateCircuitForm")
+    logger.debug("Done with CreateCircuitForm", circuit_data=circuit_data)
 
     return {
         "circuit_id": circuit_data.id,
@@ -107,7 +109,7 @@ def construct_circuit_model(
     """
     Construct the initial domain model for circuit
     """
-    logger.info("Building initial circuit model")
+    logger.debug("Building initial circuit model")
 
     # First, we instantiate an empty subscription for a circuit subscription:
     subscription = CircuitInactive.from_product_id(
@@ -117,24 +119,26 @@ def construct_circuit_model(
     )
 
     # Next, we add the circuit details to the subscription
-    logger.info("Adding Base Circuit Model fields to Subscription")
+    logger.debug("Adding Base Circuit Model fields to Subscription")
     subscription.circuit.circuit_id = state.get("circuit_id")
     subscription.circuit.under_maintenance = True
 
     # Then, we pull in the full details of this circuit from netbox for use later on:
-    logger.info(
-        f"Getting circuit details for Circuit {subscription.circuit.circuit_id} from NetBox"
+    logger.debug(
+        "Getting circuit details for circuit from NetBox",
+        circuit_id=subscription.circuit.circuit_id,
     )
     netbox_circuit = netbox.dcim.cables.get(subscription.circuit.circuit_id)
     netbox_circuit.full_details()
-    logger.info(
-        f"Grabbing Device IDs for circuit {subscription.circuit.circuit_id} from NetBox"
+    logger.debug(
+        "Grabbing Device IDs for circuit from NetBox",
+        circuit_id=subscription.circuit.circuit_id,
     )
 
     node_a_netbox_id = str(netbox_circuit.a_terminations[0].device.id)
     node_b_netbox_id = str(netbox_circuit.b_terminations[0].device.id)
 
-    logger.info("Linking existing node subscriptions")
+    logger.debug("Linking existing node subscriptions")
     # Now, we get the existing node subscriptions from the DB:
 
     node_a_subscription = retrieve_subscription_by_subscription_instance_value(
@@ -177,7 +181,7 @@ def reserve_ips_in_ipam(subscription: CircuitInactive, state: State) -> State:
     """
     Reserves the IPs for this circuit in Netbox and adds them to the domain model
     """
-    logger.info("Reserving IPs in NetBox")
+    logger.debug("Reserving IPs in NetBox")
     circuit_block_prefix = netbox.ipam.prefixes.get(CIRCUIT_PREFIX_IPAM_ID)
     # First, reserve a /64 pool for future use.
     current_circuit_prefix_64 = circuit_block_prefix.available_prefixes.create(
@@ -216,7 +220,11 @@ def reserve_ips_in_ipam(subscription: CircuitInactive, state: State) -> State:
     subscription.circuit.members[0].v6_ip_address = a_side_ip
     subscription.circuit.members[1].v6_ip_address = b_side_ip
 
-    logger.info("Finished reserving IPs in NetBox")
+    logger.debug(
+        "Finished reserving IPs in NetBox",
+        a_side_ip=subscription.circuit.members[0].v6_ip_address,
+        b_side_ip=subscription.circuit.members[1].v6_ip_address,
+    )
 
     return {"subscription": subscription}
 
@@ -276,7 +284,10 @@ def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
     """
     Renders and displays the config to a user so that they can paste it into a router.
     """
-    logger.info(f"Creating circuit payload for Circuit #{subscription.circuit.circuit_id}")
+    logger.debug(
+        "Creating circuit payload for circuit",
+        circuit_id=subscription.circuit.circuit_id,
+    )
     router_a_config = render_circuit_endpoint_config(
         node=subscription.circuit.members[0].port.node.node_name,
         interface=subscription.circuit.members[0].port.port_name,
@@ -297,10 +308,10 @@ def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
         b_side_router_config: LongText = ReadOnlyField(router_b_config)
         confirm_config_put_on_routers: Accept = Accept("INCOMPLETE")
 
-    logger.info("Presenting ConfigResults Form to user")
+    logger.debug("Presenting ConfigResults Form to user")
     form_data = yield ConfigResults
     user_input = form_data.dict()
-    logger.info("User confirmed router config, done with ConfigResults Form")
+    logger.debug("User confirmed router config, done with ConfigResults Form")
     return user_input
 
 
