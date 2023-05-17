@@ -13,7 +13,7 @@ from orchestrator.config.assignee import Assignee
 from products.product_types.node import NodeInactive, NodeProvisioning
 from utils import netbox
 
-from ..shared import CUSTOMER_UUID, create_workflow
+from workflows.shared import CUSTOMER_UUID, create_workflow
 
 
 logger = structlog.get_logger(__name__)
