@@ -19,16 +19,16 @@ class Speed(strEnum):
 class CircuitInactive(SubscriptionModel, is_base=True):
     # Equipment state is planned
     speed: Speed
-    ckt: CircuitBlockInactive
+    circuit: CircuitBlockInactive
 
 
 class CircuitProvisioning(
     CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
 ):
     speed: Speed
-    ckt: CircuitBlockProvisioning
+    circuit: CircuitBlockProvisioning
 
 
 class Circuit(CircuitProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     speed: Speed
-    ckt: CircuitBlock
+    circuit: CircuitBlock

@@ -58,32 +58,32 @@ def test_create_circuit(products):
         )
 
         assert circuit_model["description"] == f"Subscription for {circuit}"
-        assert circuit_model["ckt"]["circuit_id"] == int(parsed_circuit[1])
+        assert circuit_model["circuit"]["circuit_id"] == int(parsed_circuit[1])
 
-        assert circuit_model["ckt"]["under_maintenance"] == True
+        assert circuit_model["circuit"]["under_maintenance"] == True
 
         # Test A-Side Data
         assert (
-            circuit_model["ckt"]["members"][0]["port"]["node"]["node_name"]
+            circuit_model["circuit"]["members"][0]["port"]["node"]["node_name"]
             == parsed_circuit[2]
         )
         assert (
-            circuit_model["ckt"]["members"][0]["port"]["port_name"] == parsed_circuit[3]
+            circuit_model["circuit"]["members"][0]["port"]["port_name"] == parsed_circuit[3]
         )
         assert (
-            circuit_model["ckt"]["members"][0]["port"]["port_description"]
+            circuit_model["circuit"]["members"][0]["port"]["port_description"]
             == f"Circuit Connection to {parsed_circuit[4]} port {parsed_circuit[5]}"
         )
 
         # Test B-Side Data
         assert (
-            circuit_model["ckt"]["members"][1]["port"]["node"]["node_name"]
+            circuit_model["circuit"]["members"][1]["port"]["node"]["node_name"]
             == parsed_circuit[4]
         )
         assert (
-            circuit_model["ckt"]["members"][1]["port"]["port_name"] == parsed_circuit[5]
+            circuit_model["circuit"]["members"][1]["port"]["port_name"] == parsed_circuit[5]
         )
         assert (
-            circuit_model["ckt"]["members"][1]["port"]["port_description"]
+            circuit_model["circuit"]["members"][1]["port"]["port_description"]
             == f"Circuit Connection to {parsed_circuit[2]} port {parsed_circuit[3]}"
         )

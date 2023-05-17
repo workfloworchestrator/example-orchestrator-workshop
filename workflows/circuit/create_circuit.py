@@ -118,17 +118,17 @@ def construct_circuit_model(
 
     # Next, we add the circuit details to the subscription
     logger.info("Adding Base Circuit Model fields to Subscription")
-    subscription.ckt.circuit_id = state.get("circuit_id")
-    subscription.ckt.under_maintenance = True
+    subscription.circuit.circuit_id = state.get("circuit_id")
+    subscription.circuit.under_maintenance = True
 
     # Then, we pull in the full details of this circuit from netbox for use later on:
     logger.info(
-        f"Getting circuit details for Circuit {subscription.ckt.circuit_id} from NetBox"
+        f"Getting circuit details for Circuit {subscription.circuit.circuit_id} from NetBox"
     )
-    netbox_circuit = netbox.dcim.cables.get(subscription.ckt.circuit_id)
+    netbox_circuit = netbox.dcim.cables.get(subscription.circuit.circuit_id)
     netbox_circuit.full_details()
     logger.info(
-        f"Grabbing Device IDs for circuit {subscription.ckt.circuit_id} from NetBox"
+        f"Grabbing Device IDs for circuit {subscription.circuit.circuit_id} from NetBox"
     )
 
     node_a_netbox_id = str(netbox_circuit.a_terminations[0].device.id)
@@ -144,27 +144,27 @@ def construct_circuit_model(
         resource_type="node_id", value=node_b_netbox_id
     )
     # Link the existing node subscriptions from the DB to the circuit subscription:
-    subscription.ckt.members[0].port.node = Node.from_subscription(
+    subscription.circuit.members[0].port.node = Node.from_subscription(
         node_a_subscription.subscription_id
     ).node
-    subscription.ckt.members[1].port.node = Node.from_subscription(
+    subscription.circuit.members[1].port.node = Node.from_subscription(
         node_b_subscription.subscription_id
     ).node
 
     # Here, we construct the port product block portions of the domain model:
-    subscription.ckt.members[0].port.port_name = netbox_circuit.a_terminations[
+    subscription.circuit.members[0].port.port_name = netbox_circuit.a_terminations[
         0
     ].display
-    subscription.ckt.members[1].port.port_name = netbox_circuit.b_terminations[
+    subscription.circuit.members[1].port.port_name = netbox_circuit.b_terminations[
         0
     ].display
-    subscription.ckt.members[0].port.port_id = netbox_circuit.a_terminations[0].id
-    port_a_description = f"Circuit Connection to {subscription.ckt.members[1].port.node.node_name} port {subscription.ckt.members[1].port.port_name}"
-    subscription.ckt.members[0].port.port_description = port_a_description
+    subscription.circuit.members[0].port.port_id = netbox_circuit.a_terminations[0].id
+    port_a_description = f"Circuit Connection to {subscription.circuit.members[1].port.node.node_name} port {subscription.circuit.members[1].port.port_name}"
+    subscription.circuit.members[0].port.port_description = port_a_description
 
-    subscription.ckt.members[1].port.port_id = netbox_circuit.b_terminations[0].id
-    port_b_description = f"Circuit Connection to {subscription.ckt.members[0].port.node.node_name} port {subscription.ckt.members[0].port.port_name}"
-    subscription.ckt.members[1].port.port_description = port_b_description
+    subscription.circuit.members[1].port.port_id = netbox_circuit.b_terminations[0].id
+    port_b_description = f"Circuit Connection to {subscription.circuit.members[0].port.node.node_name} port {subscription.circuit.members[0].port.port_name}"
+    subscription.circuit.members[1].port.port_description = port_b_description
 
     return {
         "subscription": subscription,
@@ -197,24 +197,24 @@ def reserve_ips_in_ipam(subscription: CircuitInactive, state: State) -> State:
     # Now, create the NetBox IP Address entries for the devices on each side of the link:
     a_side_ip = current_circuit_prefix_127.available_ips.create(
         {
-            "description": subscription.ckt.members[0].port.port_description,
+            "description": subscription.circuit.members[0].port.port_description,
             "assigned_object_type": "dcim.interface",
-            "assigned_object_id": subscription.ckt.members[0].port.port_id,
+            "assigned_object_id": subscription.circuit.members[0].port.port_id,
             "status": "active",
         }
     )
     b_side_ip = current_circuit_prefix_127.available_ips.create(
         {
-            "description": subscription.ckt.members[1].port.port_description,
+            "description": subscription.circuit.members[1].port.port_description,
             "assigned_object_type": "dcim.interface",
-            "assigned_object_id": subscription.ckt.members[1].port.port_id,
+            "assigned_object_id": subscription.circuit.members[1].port.port_id,
             "status": "active",
         }
     )
 
     # Finally, add those IPv6 Addresses to the domain model.
-    subscription.ckt.members[0].v6_ip_address = a_side_ip
-    subscription.ckt.members[1].v6_ip_address = b_side_ip
+    subscription.circuit.members[0].v6_ip_address = a_side_ip
+    subscription.circuit.members[1].v6_ip_address = b_side_ip
 
     logger.info("Finished reserving IPs in NetBox")
 
@@ -276,18 +276,18 @@ def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
     """
     Renders and displays the config to a user so that they can paste it into a router.
     """
-    logger.info(f"Creating circuit payload for Circuit #{subscription.ckt.circuit_id}")
+    logger.info(f"Creating circuit payload for Circuit #{subscription.circuit.circuit_id}")
     router_a_config = render_circuit_endpoint_config(
-        node=subscription.ckt.members[0].port.node.node_name,
-        interface=subscription.ckt.members[0].port.port_name,
-        description=subscription.ckt.members[0].port.port_description,
-        address=subscription.ckt.members[0].v6_ip_address,
+        node=subscription.circuit.members[0].port.node.node_name,
+        interface=subscription.circuit.members[0].port.port_name,
+        description=subscription.circuit.members[0].port.port_description,
+        address=subscription.circuit.members[0].v6_ip_address,
     )
     router_b_config = render_circuit_endpoint_config(
-        node=subscription.ckt.members[1].port.node.node_name,
-        interface=subscription.ckt.members[1].port.port_name,
-        description=subscription.ckt.members[1].port.port_description,
-        address=subscription.ckt.members[1].v6_ip_address,
+        node=subscription.circuit.members[1].port.node.node_name,
+        interface=subscription.circuit.members[1].port.port_name,
+        description=subscription.circuit.members[1].port.port_description,
+        address=subscription.circuit.members[1].v6_ip_address,
     )
 
     class ConfigResults(FormPage):
@@ -311,7 +311,7 @@ def update_circuit_status_netbox(
     """
     Update the circuit state in netbox now that everything is done.
     """
-    circuit = netbox.dcim.cables.get(subscription.ckt.circuit_id)
+    circuit = netbox.dcim.cables.get(subscription.circuit.circuit_id)
     circuit.status = "connected"
     circuit.save()
 
