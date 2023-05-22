@@ -37,6 +37,34 @@ def get_valid_cables_list() -> List[Any]:
     return valid_circuits
 
 
+def generate_circuit_description(circuit_id: int, a_side_device: str, a_side_port: str, b_side_device: str, b_side_port: str) -> str:
+    """
+    generate_circuit_description creates a circuit description that is used by The Orchestrator 
+    and any system that needs to generate a circuit description. This function holds the
+    business logic for doing so. 
+
+    Args:
+        circuit_id (int): This is the circuit ID that is in netbox. This is a unique
+            integer to this circuit. (i.e. 7)
+
+        a_side_device (str): This is the name of the device on the "A" side of the circuit. For 
+            netbox's API, this is the first item in the list of circuit endpoints. (i.e. loc1-core)
+
+        a_side_port (str): This is the name of the port on the "A" side of the circuit. For 
+            netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c2/1)
+
+        b_side_device (str): This is the name of the device on the "B" side of the circuit. For 
+            netbox's API, this is the second item in the list of circuit endpoints. (i.e. loc2-core)
+
+        b_side_port (str): This is the name of the port on the "B" side of the circuit. For 
+            netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c1/1)
+
+    Returns:
+        str: The assembled circuit description. Given the examples above, this function would return:
+        "Circuit ID 7: loc1-core:1/1/c2/1 <--> loc2-core:1/1/c1/1"
+    """
+    return f"Circuit ID {circuit_id}: {a_side_device}:{a_side_port} <--> {b_side_device}:{b_side_port}"
+
 def format_circuits(circuit_list: List[Any]) -> Generator:
     """Formats a list of netbox circuits for display in the frontend"""
     pretty_circuits = []
@@ -44,7 +72,8 @@ def format_circuits(circuit_list: List[Any]) -> Generator:
         if circuit.full_details():
             a_side = circuit.a_terminations[0]
             b_side = circuit.b_terminations[0]
-            pretty_circuit = f"Circuit ID {circuit.id}: {a_side.device}:{a_side.name} <--> {b_side.device}:{b_side.name}"
+            pretty_circuit = generate_circuit_description(circuit.id, a_side.device, a_side.name, b_side.device, b_side.name)
+            # pretty_circuit = f"Circuit ID {circuit.id}: {a_side.device}:{a_side.name} <--> {b_side.device}:{b_side.name}"
             pretty_circuits.append(pretty_circuit)
 
             yield (circuit, pretty_circuit)
