@@ -20,6 +20,15 @@ from utils import netbox
 
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
+
+from orchestrator.db import (
+    ProductTable,
+    ResourceTypeTable,
+    SubscriptionInstanceTable,
+    SubscriptionInstanceValueTable,
+    SubscriptionTable,
+)
+
 logger = structlog.get_logger(__name__)
 
 # The ID of the Subnet Block we will use for assigning IPs to circuits
@@ -27,14 +36,39 @@ CIRCUIT_PREFIX_IPAM_ID = 3
 ISIS_AREA_ID = "49.0001.0123.4567.890a.0001.00"
 
 
+def retrieve_subscription_list_by_product(product_type: str) -> List[SubscriptionTable]:
+    subscriptions = (
+        SubscriptionTable.query.join(
+            ProductTable,
+            SubscriptionInstanceTable,
+            SubscriptionInstanceValueTable,
+            ResourceTypeTable,
+        )
+        .filter(ProductTable.product_type == product_type)
+        .filter(SubscriptionTable.status.in_(["active", "provisioning"]))
+        .all()
+    )
+    return subscriptions
+
+
 def get_valid_cables_list() -> List[Any]:
     """
     Connects to netbox and returns a list of valid netbox circuits/cables.
     """
     logger.debug("Connecting to Netbox to get list of available circuits/cables")
-    valid_circuits = list(netbox.dcim.cables.filter(status="planned"))
+    valid_circuits = list(netbox.dcim.device.filter(status="planned"))
     logger.debug("Found circuits/cables in Netbox", amount=len(valid_circuits))
     return valid_circuits
+
+
+def get_valid_ports_by_device(device_id: int) -> List[Any]:
+    """
+    Connects to netbox and returns a list of valid netbox circuits/cables.
+    """
+    logger.debug("Connecting to Netbox to get list of available ports for a router")
+    valid_ports = list(netbox.dcim.devices.get(device_id))
+    logger.debug("Found ports in Netbox", amount=len(valid_ports))
+    return valid_ports
 
 
 def generate_circuit_description(
@@ -89,6 +123,20 @@ def format_circuits(circuit_list: List[Any]) -> Generator:
             raise ValueError("Could not pull full details of circuit")
 
 
+def fetch_available_router_ports_by_name(router_name: str) -> List[Any]:
+    valid_ports = list(
+        netbox.dcim.interfaces.filter(
+            device=router_name, occupied=False, speed=400000000
+        )
+    )
+    # if len(valid_ports) <= 0:
+    #     raise ValueError("No ports available!")
+    # TODO: How do we display this on the front end?
+    # TODO: Filter this by the selected circuit speed (fixed input?)
+    logger.debug("Found ports in Netbox", amount=len(valid_ports))
+    return valid_ports
+
+
 def initial_input_form_generator(product_name: str) -> FormGenerator:
     """
     Generates the Circuit Form to display to the user.
@@ -97,15 +145,19 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     # TODO: Add validator to make sure that the nodes this circuit depends on already exist.
 
     # First, get the data we need to present a list of circuits to a user
-    valid_circuits = get_valid_cables_list()
-    pretty_circuits = list(format_circuits(valid_circuits))
+    # TODO: Get router list from subscription table.
+    node_subs = retrieve_subscription_list_by_product("Node")
+    choices = [
+        Node.from_subscription(node.subscription_id).node.node_name
+        for node in node_subs
+    ]
 
-    # Then format the circuits into a choice list:
-    choices = [circuit[1] for circuit in pretty_circuits]
-    CircuitEnum = Choice("CircuitEnum", zip(choices, choices))
+    # Then format the routers into a choice list:
+    # choices = ["loc1-core", "loc2-core", "loc3-core"]
+    EndpointA = Choice("EndpointA", zip(choices, choices))
 
     # Next, construct the form to display to the user:
-    class CreateCircuitForm(FormPage):
+    class RouterAForm(FormPage):
         """FormPage for Creating a Circuit"""
 
         class Config:
@@ -113,28 +165,70 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
 
             title = product_name
 
-        select_circuit_choice: CircuitEnum  # type: ignore
+        router_a: EndpointA
 
     # Now we present the form to the user
     logger.debug("Presenting CreateCircuitForm to user")
-    user_input = yield CreateCircuitForm
+    router_a = yield RouterAForm
+
+    # Now Remove previously used router from list and present new form.
+    choices.remove(str(router_a.router_a))
+    EndpointB = Choice("Endpoint B", zip(choices, choices))
+
+    class RouterBForm(FormPage):
+        """FormPage for Creating a Circuit"""
+
+        class Config:
+            """Config class for Creating a Circuit"""
+
+            title = product_name
+
+        router_b: EndpointB
+
+    # Now we present the form to the user
+    logger.debug("Presenting CreateCircuitForm to user")
+    router_b = yield RouterBForm
+
+    # a_port_list = ["1/1/c1/1", "1/1/c2/1"]
+    # b_port_list = ["2/1/c1/1", "1/1/c2/1"]
+
+    a_port_list = [
+        port.display
+        for port in fetch_available_router_ports_by_name(router_name=router_a.router_a)
+    ]
+    b_port_list = [
+        port.display
+        for port in fetch_available_router_ports_by_name(router_name=router_b.router_b)
+    ]
+
+    APort = Choice(f"{str(router_a.router_a)} Port", zip(a_port_list, a_port_list))
+    BPort = Choice(f"{str(router_b.router_b)} Port", zip(b_port_list, b_port_list))
+
+    class PortSelectionForm(FormPage):
+        """FormPage for Creating a Circuit"""
+
+        class Config:
+            """Config class for Creating a Circuit"""
+
+            title = "Choose circuit ports"
+
+        a_port: APort
+        b_port: BPort
+
+    ports = yield PortSelectionForm
 
     # Once we get the form selecton back from the user we send that circuit ID
     # to the state object for use in generating the subscription
     logger.debug(
-        "User selected a circuit/cable", choice=user_input.select_circuit_choice
-    )
-    circuit_data = next(
-        circuit[0]
-        for circuit in pretty_circuits
-        if user_input.select_circuit_choice == circuit[1]
+        "User selected a circuit/cable",
     )
 
-    logger.debug("Done with CreateCircuitForm", circuit_data=circuit_data)
+    logger.debug("Done with CreateCircuitForm")
 
     return {
-        "circuit_id": circuit_data.id,
-        "pretty_circuit": user_input.select_circuit_choice,
+        "router_a": router_a.router_a,
+        "router_b": router_b.router_b,
+        "ports": ports,
     }
 
 
@@ -157,32 +251,31 @@ def construct_circuit_model(
 
     # Next, we add the circuit details to the subscription
     logger.debug("Adding Base Circuit Model fields to Subscription")
-    subscription.circuit.circuit_id = state.get("circuit_id")
+
+    a_port = list(
+        netbox.dcim.interfaces.filter(
+            device=state["router_a"], name=state["ports"]["a_port"]
+        )
+    )[0]
+    b_port = list(
+        netbox.dcim.interfaces.filter(
+            device=state["router_b"], name=state["ports"]["b_port"]
+        )
+    )[0]
+    netbox_circuit = netbox.dcim.cables.create(
+        a_terminations=[{"object_id": a_port.id, "object_type": "dcim.interface"}],
+        b_terminations=[{"object_id": b_port.id, "object_type": "dcim.interface"}],
+        status="planned",
+    )
+
+    subscription.circuit.circuit_id = netbox_circuit.id
     subscription.circuit.under_maintenance = True
 
-    # Then, we pull in the full details of this circuit from netbox for use later on:
-    logger.debug(
-        "Getting circuit details for circuit from NetBox",
-        circuit_id=subscription.circuit.circuit_id,
-    )
-    netbox_circuit = netbox.dcim.cables.get(subscription.circuit.circuit_id)
-    netbox_circuit.full_details()
-    logger.debug(
-        "Grabbing Device IDs for circuit from NetBox",
-        circuit_id=subscription.circuit.circuit_id,
-    )
-
-    node_a_netbox_id = str(netbox_circuit.a_terminations[0].device.id)
-    node_b_netbox_id = str(netbox_circuit.b_terminations[0].device.id)
-
-    logger.debug("Linking existing node subscriptions")
-    # Now, we get the existing node subscriptions from the DB:
-
     node_a_subscription = retrieve_subscription_by_subscription_instance_value(
-        resource_type="node_id", value=node_a_netbox_id
+        resource_type="node_name", value=state["router_a"]
     )
     node_b_subscription = retrieve_subscription_by_subscription_instance_value(
-        resource_type="node_id", value=node_b_netbox_id
+        resource_type="node_name", value=state["router_b"]
     )
     # Link the existing node subscriptions from the DB to the circuit subscription:
     subscription.circuit.members[0].port.node = Node.from_subscription(
