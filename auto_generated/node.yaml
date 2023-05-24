@@ -3,26 +3,32 @@
 #
 
 config:
-  create_summary_forms: false
+  create_summary_forms: true
   send_email: false
 name: Node
 type: node
-variable: ws_node
+tag: NODE
+description: "network node"
 product_blocks:
   - name: node
     type: Node
-    block_name: "Node"
+    tag: NODE
+    description: "network node"
     variable: ws_node
     fields:
       - name: node_id
         type: int
+        description: "node id"
         required: provisioning
       - name: node_name
         type: str
+        description: "node name"
         required: provisioning
       - name: ipv4_loopback
         type: ipaddress.IPv4Address
+        description: "node loopback IPv4 address"
         required: provisioning
       - name: ipv6_loopback
+        description: "node loopback IPv6 address"
         type: ipaddress.IPv6Address
         required: provisioning

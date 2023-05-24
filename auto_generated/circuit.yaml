@@ -3,28 +3,38 @@
 #
 
 config:
-  create_summary_forms: false
+  create_summary_forms: true
   send_email: false
 name: Circuit
 type: Circuit
-variable: circuit
+tag: CIRCUIT
+description: "point to point circuit"
 fixed_inputs:
   - name: speed
-    type: Speed
+    type: enum
+    description: "service speed"
+    enum_type: int
+    values:
+      - 1
+      - 10
+      - 100
 product_blocks:
-  - name: ckt
+  - name: circuit
     type: Circuit
-    block_name: "Circuit"
-    variable: circuit
+    tag: CIRCUIT
+    description: "circuit product block"
     fields:
       - name: members
         type: list
+        description: "circuit interface members"
         list_type: Layer3Interface
         min_items: 2
         max_items: 2
       - name: circuit_id
+        description: "circuit id"
         type: int
         required: provisioning
       - name: under_maintenance
         type: bool
+        description: "circuit under maintenance"
         required: provisioning
