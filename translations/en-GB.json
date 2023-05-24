@@ -1,0 +1,14 @@
+{
+  "forms": {
+    "fields": {
+      "confirm_config_put_on_routers_info": "Confirm that the config is applied to the node",
+      "confirm_config_put_on_routers": "Node configured"
+    }
+  },
+  "subscription": {
+  },
+  "subscription_instance": {
+  },
+  "workflow": {
+  }
+}

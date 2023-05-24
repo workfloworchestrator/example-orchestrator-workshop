@@ -134,6 +134,7 @@ services:
       - ./utils.py:/home/orchestrator/utils.py
       - ./requirements.txt:/home/orchestrator/requirements.txt
       - ./alembic.ini:/home/orchestrator/alembic.ini
+      - ./translations:/home/orchestrator/translations
     entrypoint: [ "/home/orchestrator/etc/orchestrator/entrypoint.sh" ]
     depends_on:
       postgres:

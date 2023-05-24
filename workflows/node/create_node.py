@@ -36,7 +36,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Generating initial input form")
     nodes = get_nodes_list()
     choices = [node.name for node in nodes]
-    NodeEnum = Choice("NodeEnum", zip(choices, choices))  # type: ignore
+    NodeEnum = Choice("Planned nodes", zip(choices, choices))  # type: ignore
 
     class CreateNodeForm(FormPage):
         """FormPage for Creating a node"""
@@ -72,7 +72,7 @@ def construct_node_model(
 
     subscription.node.node_id = node_id
     subscription.node.node_name = node_name
-    subscription.description = f"Node {node_name} Subscription"
+    subscription.description = f"Node {node_name}"
 
     return {
         "subscription": subscription,
@@ -123,7 +123,7 @@ copy running-config startup-config"""
     class ConfigResults(FormPage):
         """FormPage for showing a user the config needed for a node"""
 
-        confirmation_results: LongText = ReadOnlyField(router_config)
+        node_config: LongText = ReadOnlyField(router_config)
         confirm_config_put_on_routers: Accept = Accept("INCOMPLETE")
 
     form_data = yield ConfigResults
