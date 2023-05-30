@@ -14,13 +14,18 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.circuit import CircuitInactive, CircuitProvisioning
 from products.product_types.node import Node
 from utils import netbox
-from workflows.shared import CUSTOMER_UUID, create_workflow, retrieve_subscription_list_by_product
+from workflows.shared import (
+    CUSTOMER_UUID,
+    create_workflow,
+    retrieve_subscription_list_by_product,
+)
 
 logger = structlog.get_logger(__name__)
 
 # The ID of the Subnet Block we will use for assigning IPs to circuits
 CIRCUIT_PREFIX_IPAM_ID = 3
 ISIS_AREA_ID = "49.0001.0123.4567.890a.0001.00"
+
 
 def generate_circuit_description(
     circuit_id: int,
@@ -51,10 +56,32 @@ def generate_circuit_description(
             netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c1/1)
 
     Returns:
-        str: The assembled circuit description. Given the examples above, this function would return:
+        str: The assembled circuit description. Given the examples above this function would return:
         "Circuit ID 7: loc1-core:1/1/c2/1 <--> loc2-core:1/1/c1/1"
     """
     return f"Circuit ID {circuit_id}: {a_side_device}:{a_side_port} <--> {b_side_device}:{b_side_port}"
+
+
+def generate_interface_description(
+    remote_device: str,
+    remote_port: str,
+) -> str:
+    """
+    generate_interface_description creates an interface description that is used by The Orch
+    and any system that needs to generate an interface description. This function holds the
+    business logic for doing so.
+
+    Args:
+        remote_device (str): This is the name of the device on the far side of the circuit
+            from this interface's perspective. (i.e. loc2-core)
+        remote_port (str): This is the name of the port on the far side of the circuit
+            from this interface's perspective. (i.e. 1/1/c1/1)
+
+    Returns:
+        str: The assembled interface description. Given the examples above this function would return:
+        "Circuit Connection to loc2-core port 1/1/c1/1"
+    """
+    return f"Circuit Connection to {remote_device} port {remote_port}"
 
 
 def fetch_available_router_ports_by_name(router_name: str) -> List[Any]:
@@ -74,7 +101,9 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Generating initial input form for Circuit")
 
     # First, get the data we need to present a list of circuits to a user
-    node_subs = retrieve_subscription_list_by_product("Node", [SubscriptionLifecycle.ACTIVE])
+    node_subs = retrieve_subscription_list_by_product(
+        "Node", [SubscriptionLifecycle.ACTIVE]
+    )
     choices = {}
     for node in node_subs:
         choices[str(node.subscription_id)] = Node.from_subscription(
@@ -217,11 +246,17 @@ def construct_circuit_model(
         0
     ].display
     subscription.circuit.members[0].port.port_id = netbox_circuit.a_terminations[0].id
-    port_a_description = f"Circuit Connection to {subscription.circuit.members[1].port.node.node_name} port {subscription.circuit.members[1].port.port_name}"
+    port_a_description = generate_interface_description(
+        remote_device=subscription.circuit.members[1].port.node.node_name,
+        remote_port=subscription.circuit.members[1].port.port_name,
+    )
     subscription.circuit.members[0].port.port_description = port_a_description
 
     subscription.circuit.members[1].port.port_id = netbox_circuit.b_terminations[0].id
-    port_b_description = f"Circuit Connection to {subscription.circuit.members[0].port.node.node_name} port {subscription.circuit.members[0].port.port_name}"
+    port_b_description = generate_interface_description(
+        remote_device=subscription.circuit.members[0].port.node.node_name,
+        remote_port=subscription.circuit.members[0].port.port_name,
+    )
     subscription.circuit.members[1].port.port_description = port_b_description
 
     # Generate the circuit description to be used by various later things
