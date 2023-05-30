@@ -6,9 +6,6 @@ import structlog
 from orchestrator.config.assignee import Assignee
 from orchestrator.forms import FormPage, ReadOnlyField
 from orchestrator.forms.validators import Accept, Choice, LongText
-from orchestrator.services.subscriptions import (
-    retrieve_subscription_by_subscription_instance_value,
-)
 from orchestrator.targets import Target
 from orchestrator.types import FormGenerator, State, SubscriptionLifecycle, UUIDstr
 from orchestrator.workflow import StepList, begin, inputstep, step
@@ -17,39 +14,13 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.circuit import CircuitInactive, CircuitProvisioning
 from products.product_types.node import Node
 from utils import netbox
-
-from workflows.shared import CUSTOMER_UUID, create_workflow
-
-
-from orchestrator.db import (
-    ProductTable,
-    ResourceTypeTable,
-    SubscriptionInstanceTable,
-    SubscriptionInstanceValueTable,
-    SubscriptionTable,
-)
+from workflows.shared import CUSTOMER_UUID, create_workflow, retrieve_subscription_list_by_product
 
 logger = structlog.get_logger(__name__)
 
 # The ID of the Subnet Block we will use for assigning IPs to circuits
 CIRCUIT_PREFIX_IPAM_ID = 3
 ISIS_AREA_ID = "49.0001.0123.4567.890a.0001.00"
-
-
-def retrieve_subscription_list_by_product(product_type: str) -> List[SubscriptionTable]:
-    subscriptions = (
-        SubscriptionTable.query.join(
-            ProductTable,
-            SubscriptionInstanceTable,
-            SubscriptionInstanceValueTable,
-            ResourceTypeTable,
-        )
-        .filter(ProductTable.product_type == product_type)
-        .filter(SubscriptionTable.status.in_(["active", "provisioning"]))
-        .all()
-    )
-    return subscriptions
-
 
 def generate_circuit_description(
     circuit_id: int,

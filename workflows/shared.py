@@ -1,5 +1,12 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 
+from orchestrator.db import (
+    ProductTable,
+    ResourceTypeTable,
+    SubscriptionInstanceTable,
+    SubscriptionInstanceValueTable,
+    SubscriptionTable,
+)
 from orchestrator.targets import Target
 from orchestrator.types import InputStepFunc, SubscriptionLifecycle
 from orchestrator.workflow import (
@@ -51,3 +58,18 @@ def create_workflow(
         )
 
     return _create_workflow
+
+
+def retrieve_subscription_list_by_product(product_type: str) -> List[SubscriptionTable]:
+    subscriptions = (
+        SubscriptionTable.query.join(
+            ProductTable,
+            SubscriptionInstanceTable,
+            SubscriptionInstanceValueTable,
+            ResourceTypeTable,
+        )
+        .filter(ProductTable.product_type == product_type)
+        .filter(SubscriptionTable.status.in_(["active", "provisioning"]))
+        .all()
+    )
+    return subscriptions
