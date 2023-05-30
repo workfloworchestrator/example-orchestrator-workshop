@@ -1,6 +1,6 @@
 """Workflow to initially create a circuit between two nodes."""
 from ipaddress import IPv6Interface
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 import structlog
 from orchestrator.config.assignee import Assignee
