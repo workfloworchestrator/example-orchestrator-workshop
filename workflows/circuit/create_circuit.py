@@ -74,7 +74,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Generating initial input form for Circuit")
 
     # First, get the data we need to present a list of circuits to a user
-    node_subs = retrieve_subscription_list_by_product("Node")
+    node_subs = retrieve_subscription_list_by_product("Node", [SubscriptionLifecycle.ACTIVE])
     choices = {}
     for node in node_subs:
         choices[str(node.subscription_id)] = Node.from_subscription(
