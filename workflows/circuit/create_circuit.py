@@ -51,26 +51,6 @@ def retrieve_subscription_list_by_product(product_type: str) -> List[Subscriptio
     return subscriptions
 
 
-def get_valid_cables_list() -> List[Any]:
-    """
-    Connects to netbox and returns a list of valid netbox circuits/cables.
-    """
-    logger.debug("Connecting to Netbox to get list of available circuits/cables")
-    valid_circuits = list(netbox.dcim.device.filter(status="planned"))
-    logger.debug("Found circuits/cables in Netbox", amount=len(valid_circuits))
-    return valid_circuits
-
-
-def get_valid_ports_by_device(device_id: int) -> List[Any]:
-    """
-    Connects to netbox and returns a list of valid netbox circuits/cables.
-    """
-    logger.debug("Connecting to Netbox to get list of available ports for a router")
-    valid_ports = list(netbox.dcim.devices.get(device_id))
-    logger.debug("Found ports in Netbox", amount=len(valid_ports))
-    return valid_ports
-
-
 def generate_circuit_description(
     circuit_id: int,
     a_side_device: str,
@@ -106,33 +86,12 @@ def generate_circuit_description(
     return f"Circuit ID {circuit_id}: {a_side_device}:{a_side_port} <--> {b_side_device}:{b_side_port}"
 
 
-def format_circuits(circuit_list: List[Any]) -> Generator:
-    """Formats a list of netbox circuits for display in the frontend"""
-    pretty_circuits = []
-    for circuit in circuit_list:
-        if circuit.full_details():
-            a_side = circuit.a_terminations[0]
-            b_side = circuit.b_terminations[0]
-            pretty_circuit = generate_circuit_description(
-                circuit.id, a_side.device, a_side.name, b_side.device, b_side.name
-            )
-            pretty_circuits.append(pretty_circuit)
-
-            yield (circuit, pretty_circuit)
-        else:
-            raise ValueError("Could not pull full details of circuit")
-
-
 def fetch_available_router_ports_by_name(router_name: str) -> List[Any]:
     valid_ports = list(
         netbox.dcim.interfaces.filter(
             device=router_name, occupied=False, speed=400000000
         )
     )
-    # if len(valid_ports) <= 0:
-    #     raise ValueError("No ports available!")
-    # TODO: How do we display this on the front end?
-    # TODO: Filter this by the selected circuit speed (fixed input?)
     logger.debug("Found ports in Netbox", amount=len(valid_ports))
     return valid_ports
 
@@ -142,19 +101,17 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     Generates the Circuit Form to display to the user.
     """
     logger.debug("Generating initial input form for Circuit")
-    # TODO: Add validator to make sure that the nodes this circuit depends on already exist.
 
     # First, get the data we need to present a list of circuits to a user
-    # TODO: Get router list from subscription table.
     node_subs = retrieve_subscription_list_by_product("Node")
-    choices = [
-        Node.from_subscription(node.subscription_id).node.node_name
-        for node in node_subs
-    ]
+    choices = {}
+    for node in node_subs:
+        choices[str(node.subscription_id)] = Node.from_subscription(
+            node.subscription_id
+        ).node.node_name
 
-    # Then format the routers into a choice list:
-    # choices = ["loc1-core", "loc2-core", "loc3-core"]
-    EndpointA = Choice("EndpointA", zip(choices, choices))
+    # choices = {"subid": "label", "subid2": "label"}
+    EndpointA = Choice("Endpoint A", zip(choices, choices.values()))
 
     # Next, construct the form to display to the user:
     class RouterAForm(FormPage):
@@ -172,8 +129,8 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     router_a = yield RouterAForm
 
     # Now Remove previously used router from list and present new form.
-    choices.remove(str(router_a.router_a))
-    EndpointB = Choice("Endpoint B", zip(choices, choices))
+    choices.pop(str(router_a.router_a._name_))
+    EndpointB = Choice("Endpoint B", zip(choices, choices.values()))
 
     class RouterBForm(FormPage):
         """FormPage for Creating a Circuit"""
