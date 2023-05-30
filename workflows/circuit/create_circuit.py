@@ -149,17 +149,21 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     # a_port_list = ["1/1/c1/1", "1/1/c2/1"]
     # b_port_list = ["2/1/c1/1", "1/1/c2/1"]
 
-    a_port_list = [
-        port.display
-        for port in fetch_available_router_ports_by_name(router_name=router_a.router_a)
-    ]
-    b_port_list = [
-        port.display
-        for port in fetch_available_router_ports_by_name(router_name=router_b.router_b)
-    ]
+    a_port_list = {}
+    for port in fetch_available_router_ports_by_name(router_name=router_a.router_a):
+        a_port_list[str(port.id)] = port.display
+    b_port_list = {}
+    for port in fetch_available_router_ports_by_name(router_name=router_b.router_b):
+        b_port_list[str(port.id)] = port.display
 
-    APort = Choice(f"{str(router_a.router_a)} Port (Endpoint A)", zip(a_port_list, a_port_list))
-    BPort = Choice(f"{str(router_b.router_b)} Port (Endpoint B)", zip(b_port_list, b_port_list))
+    APort = Choice(
+        f"{str(router_a.router_a)} Port (Endpoint A)",
+        zip(a_port_list, a_port_list.values()),
+    )
+    BPort = Choice(
+        f"{str(router_b.router_b)} Port (Endpoint B)",
+        zip(b_port_list, b_port_list.values()),
+    )
 
     class PortSelectionForm(FormPage):
         """FormPage for Creating a Circuit"""
