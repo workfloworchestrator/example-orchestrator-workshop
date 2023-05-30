@@ -1,6 +1,6 @@
 """Workflow to initially create a circuit between two nodes."""
 from ipaddress import IPv6Interface
-from typing import Any, Generator, List
+from typing import Any, List, Dict
 
 import structlog
 from orchestrator.config.assignee import Assignee
@@ -158,8 +158,8 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Done with CreateCircuitForm")
 
     return {
-        "router_a": router_a.router_a,
-        "router_b": router_b.router_b,
+        "router_a": router_a.router_a._name_,
+        "router_b": router_b.router_b._name_,
         "ports": ports,
     }
 
@@ -167,7 +167,9 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
 @step("Construct Circuit model")
 def construct_circuit_model(
     product: UUIDstr,
-    state: State,
+    ports: Dict[str, str],
+    router_a: Node,
+    router_b: Node,
 ) -> State:
     """
     Construct the initial domain model for circuit
@@ -186,12 +188,12 @@ def construct_circuit_model(
 
     a_port = list(
         netbox.dcim.interfaces.filter(
-            device=state["router_a"], name=state["ports"]["a_port"]
+            device=router_a.node.node_name, name=ports["a_port"]
         )
     )[0]
     b_port = list(
         netbox.dcim.interfaces.filter(
-            device=state["router_b"], name=state["ports"]["b_port"]
+            device=router_b.node.node_name, name=ports["b_port"]
         )
     )[0]
     netbox_circuit = netbox.dcim.cables.create(
@@ -203,19 +205,9 @@ def construct_circuit_model(
     subscription.circuit.circuit_id = netbox_circuit.id
     subscription.circuit.under_maintenance = True
 
-    node_a_subscription = retrieve_subscription_by_subscription_instance_value(
-        resource_type="node_name", value=state["router_a"]
-    )
-    node_b_subscription = retrieve_subscription_by_subscription_instance_value(
-        resource_type="node_name", value=state["router_b"]
-    )
     # Link the existing node subscriptions from the DB to the circuit subscription:
-    subscription.circuit.members[0].port.node = Node.from_subscription(
-        node_a_subscription.subscription_id
-    ).node
-    subscription.circuit.members[1].port.node = Node.from_subscription(
-        node_b_subscription.subscription_id
-    ).node
+    subscription.circuit.members[0].port.node = router_a.node
+    subscription.circuit.members[1].port.node = router_b.node
 
     # Here, we construct the port product block portions of the domain model:
     subscription.circuit.members[0].port.port_name = netbox_circuit.a_terminations[
