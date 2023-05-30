@@ -300,6 +300,21 @@ def construct_circuit_model(
     port_b_description = f"Circuit Connection to {subscription.circuit.members[0].port.node.node_name} port {subscription.circuit.members[0].port.port_name}"
     subscription.circuit.members[1].port.port_description = port_b_description
 
+    # Generate the circuit description to be used by various later things
+    circuit_description = generate_circuit_description(
+        circuit_id=subscription.circuit.circuit_id,
+        a_side_device=subscription.circuit.members[0].port.node.node_name,
+        a_side_port=subscription.circuit.members[0].port.port_name,
+        b_side_device=subscription.circuit.members[1].port.node.node_name,
+        b_side_port=subscription.circuit.members[1].port.port_name,
+    )
+
+    subscription.circuit.circuit_description = circuit_description
+
+    # Update netbox's planned circuit with the circuit description
+    netbox_circuit.description = circuit_description
+    netbox_circuit.save()
+
     return {
         "subscription": subscription,
         "subscription_id": subscription.subscription_id,
@@ -307,7 +322,9 @@ def construct_circuit_model(
 
 
 @step("Reserve IPs in Netbox")
-def reserve_ips_in_ipam(subscription: CircuitInactive, state: State) -> State:
+def reserve_ips_in_ipam(
+    subscription: CircuitInactive,
+) -> State:
     """
     Reserves the IPs for this circuit in Netbox and adds them to the domain model
     """
@@ -317,7 +334,7 @@ def reserve_ips_in_ipam(subscription: CircuitInactive, state: State) -> State:
     current_circuit_prefix_64 = circuit_block_prefix.available_prefixes.create(
         {
             "prefix_length": 64,
-            "description": f"{state.get('pretty_circuit')} Parent /64",
+            "description": f"{subscription.circuit.circuit_description} Parent /64",
             "is_pool": "on",
         }
     )
@@ -325,7 +342,7 @@ def reserve_ips_in_ipam(subscription: CircuitInactive, state: State) -> State:
     current_circuit_prefix_127 = current_circuit_prefix_64.available_prefixes.create(
         {
             "prefix_length": 127,
-            "description": f"{state.get('pretty_circuit')} Point-to-Point",
+            "description": f"{subscription.circuit.circuit_description} Point-to-Point",
         }
     )
     # Now, create the NetBox IP Address entries for the devices on each side of the link:
@@ -462,12 +479,14 @@ def update_circuit_status_netbox(
 @step("Update Subscription Description")
 def update_subscription_description(
     subscription: CircuitProvisioning,
-    state: State,
 ) -> State:
     """
     Update the subscription description to show the final circuit information.
     """
-    subscription.description = f"Subscription for {state.get('pretty_circuit')}"
+
+    subscription.description = (
+        f"Subscription for {subscription.circuit.circuit_description}"
+    )
 
     return {"subscription": subscription}
 

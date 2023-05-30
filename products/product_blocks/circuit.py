@@ -82,6 +82,7 @@ class CircuitBlockInactive(ProductBlockModel, product_block_name="Circuit"):
 
     members: PortPair[Layer3InterfaceInactive]
     circuit_id: int | None = None
+    circuit_description : str | None = None
     under_maintenance: bool | None = None
 
 
@@ -92,6 +93,7 @@ class CircuitBlockProvisioning(
 
     members: PortPair[Layer3InterfaceProvisioning]
     circuit_id: int
+    circuit_description : str
     under_maintenance: bool
 
 
@@ -100,4 +102,5 @@ class CircuitBlock(CircuitBlockProvisioning, lifecycle=[SubscriptionLifecycle.AC
 
     members: PortPair[Layer3Interface]
     circuit_id: int
+    circuit_description : str
     under_maintenance: bool

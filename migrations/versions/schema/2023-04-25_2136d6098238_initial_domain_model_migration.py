@@ -69,6 +69,9 @@ INSERT INTO resource_types (resource_type, description) VALUES ('node_name', 'No
 INSERT INTO resource_types (resource_type, description) VALUES ('circuit_id', 'Circuit ID') RETURNING resource_types.resource_type_id
     """)
     conn.execute("""
+INSERT INTO resource_types (resource_type, description) VALUES ('circuit_description', 'Circuit Description') RETURNING resource_types.resource_type_id
+    """)
+    conn.execute("""
 INSERT INTO product_product_blocks (product_id, product_block_id) VALUES ((SELECT products.product_id FROM products WHERE products.name IN ('Node')), (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Node')))
     """)
     conn.execute("""
@@ -97,6 +100,9 @@ INSERT INTO product_block_resource_types (product_block_id, resource_type_id) VA
     """)
     conn.execute("""
 INSERT INTO product_block_resource_types (product_block_id, resource_type_id) VALUES ((SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit')), (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('circuit_id')))
+    """)
+    conn.execute("""
+INSERT INTO product_block_resource_types (product_block_id, resource_type_id) VALUES ((SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit')), (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('circuit_description')))
     """)
     conn.execute("""
 INSERT INTO product_block_resource_types (product_block_id, resource_type_id) VALUES ((SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit')), (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('under_maintenance')))
@@ -145,7 +151,13 @@ DELETE FROM subscription_instance_values USING product_block_resource_types WHER
 DELETE FROM product_block_resource_types WHERE product_block_resource_types.product_block_id IN (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit')) AND product_block_resource_types.resource_type_id = (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('circuit_id'))
     """)
     conn.execute("""
+DELETE FROM product_block_resource_types WHERE product_block_resource_types.product_block_id IN (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit')) AND product_block_resource_types.resource_type_id = (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('circuit_description'))
+    """)
+    conn.execute("""
 DELETE FROM subscription_instance_values USING product_block_resource_types WHERE subscription_instance_values.subscription_instance_id IN (SELECT subscription_instances.subscription_instance_id FROM subscription_instances WHERE subscription_instances.subscription_instance_id IN (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit'))) AND product_block_resource_types.resource_type_id = (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('circuit_id'))
+    """)
+    conn.execute("""
+DELETE FROM subscription_instance_values USING product_block_resource_types WHERE subscription_instance_values.subscription_instance_id IN (SELECT subscription_instances.subscription_instance_id FROM subscription_instances WHERE subscription_instances.subscription_instance_id IN (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit'))) AND product_block_resource_types.resource_type_id = (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('circuit_description'))
     """)
     conn.execute("""
 DELETE FROM product_block_resource_types WHERE product_block_resource_types.product_block_id IN (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Circuit')) AND product_block_resource_types.resource_type_id = (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('under_maintenance'))
@@ -181,7 +193,13 @@ DELETE FROM subscription_instance_values USING product_block_resource_types WHER
 DELETE FROM subscription_instance_values WHERE subscription_instance_values.resource_type_id IN (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('ipv4_loopback', 'under_maintenance', 'port_name', 'node_id', 'port_id', 'port_description', 'ipv6_loopback', 'v6_ip_address', 'node_name', 'circuit_id'))
     """)
     conn.execute("""
+DELETE FROM subscription_instance_values WHERE subscription_instance_values.resource_type_id IN (SELECT resource_types.resource_type_id FROM resource_types WHERE resource_types.resource_type IN ('ipv4_loopback', 'under_maintenance', 'port_name', 'node_id', 'port_id', 'port_description', 'ipv6_loopback', 'v6_ip_address', 'node_name', 'circuit_description'))
+    """)
+    conn.execute("""
 DELETE FROM resource_types WHERE resource_types.resource_type IN ('ipv4_loopback', 'under_maintenance', 'port_name', 'node_id', 'port_id', 'port_description', 'ipv6_loopback', 'v6_ip_address', 'node_name', 'circuit_id')
+    """)
+    conn.execute("""
+DELETE FROM resource_types WHERE resource_types.resource_type IN ('ipv4_loopback', 'under_maintenance', 'port_name', 'node_id', 'port_id', 'port_description', 'ipv6_loopback', 'v6_ip_address', 'node_name', 'circuit_description')
     """)
     conn.execute("""
 DELETE FROM product_product_blocks WHERE product_product_blocks.product_id IN (SELECT products.product_id FROM products WHERE products.name IN ('Node')) AND product_product_blocks.product_block_id IN (SELECT product_blocks.product_block_id FROM product_blocks WHERE product_blocks.name IN ('Node'))
