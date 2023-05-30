@@ -158,8 +158,8 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
         for port in fetch_available_router_ports_by_name(router_name=router_b.router_b)
     ]
 
-    APort = Choice(f"{str(router_a.router_a)} Port", zip(a_port_list, a_port_list))
-    BPort = Choice(f"{str(router_b.router_b)} Port", zip(b_port_list, b_port_list))
+    APort = Choice(f"{str(router_a.router_a)} Port (Endpoint A)", zip(a_port_list, a_port_list))
+    BPort = Choice(f"{str(router_b.router_b)} Port (Endpoint B)", zip(b_port_list, b_port_list))
 
     class PortSelectionForm(FormPage):
         """FormPage for Creating a Circuit"""
@@ -408,8 +408,8 @@ def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
     class ConfigResults(FormPage):
         """FormPage for showing a user the config needed for a node"""
 
-        a_side_router_config: LongText = ReadOnlyField(router_a_config)
-        b_side_router_config: LongText = ReadOnlyField(router_b_config)
+        endpoint_a_router_config: LongText = ReadOnlyField(router_a_config)
+        endpoint_b_router_config: LongText = ReadOnlyField(router_b_config)
         confirm_config_put_on_routers: Accept = Accept("INCOMPLETE")
 
     logger.debug("Presenting ConfigResults Form to user")
