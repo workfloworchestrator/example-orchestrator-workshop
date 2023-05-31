@@ -7,5 +7,7 @@
   },
   "subscription": {},
   "subscription_instance": {},
-  "workflow": {}
+  "workflow": {
+    "modify_circuit": "Modify the circuit"
+  }
 }

@@ -1,4 +1,5 @@
-from typing import Callable, Optional, List
+from inspect import isgeneratorfunction
+from typing import Callable, Optional, List, cast
 
 from orchestrator.db import (
     ProductTable,
@@ -8,7 +9,8 @@ from orchestrator.db import (
     SubscriptionTable,
 )
 from orchestrator.targets import Target
-from orchestrator.types import InputStepFunc, SubscriptionLifecycle
+from orchestrator.types import InputStepFunc, SubscriptionLifecycle, FormGenerator, State, InputForm, StateInputStepFunc
+from orchestrator.utils.state import form_inject_args
 from orchestrator.workflow import (
     StepList,
     Workflow,
@@ -17,9 +19,8 @@ from orchestrator.workflow import (
     make_workflow,
     conditional,
 )
-from orchestrator.workflows.steps import resync, set_status
-from orchestrator.workflows.utils import wrap_create_initial_input_form
-
+from orchestrator.workflows.steps import resync, set_status, store_process_subscription, unsync
+from orchestrator.workflows.utils import wrap_create_initial_input_form, _generate_modify_form
 
 is_provisioning = conditional(
     lambda state: state["subscription"]["status"] == SubscriptionLifecycle.PROVISIONING
@@ -58,6 +59,108 @@ def create_workflow(
         )
 
     return _create_workflow
+
+
+def wrap_modify_initial_input_form(initial_input_form: Optional[InputStepFunc]) -> Optional[StateInputStepFunc]:
+    """Wrap initial input for modify and terminate workflows.
+
+    This is needed because the frontend expects all modify workflows to start with a page that only contains the
+    subscription id. It also expects the second page to have some user visible inputs and the subscription id *again*.
+    """
+
+    def create_initial_input_form_generator(state: State) -> FormGenerator:
+        workflow_target: str = state["workflow_target"]
+        workflow_name: str = state["workflow_name"]
+
+        user_input = yield _generate_modify_form(workflow_target, workflow_name)
+
+        subscription = SubscriptionTable.query.get(user_input.subscription_id)
+
+        begin_state = {
+            "subscription_id": str(subscription.subscription_id),
+            "product": str(subscription.product_id),
+            "organisation": str(subscription.customer_id),
+        }
+
+        if initial_input_form is None:
+            return begin_state
+
+        form = form_inject_args(initial_input_form)({**state, **begin_state})
+
+        if isgeneratorfunction(initial_input_form):
+            user_input = yield from cast(FormGenerator, form)
+        else:
+            user_input_model = yield cast(InputForm, form)
+            user_input = user_input_model.dict()
+
+        return {**begin_state, **user_input}
+
+    return create_initial_input_form_generator
+
+
+def modify_workflow(
+    description: str, initial_input_form: InputStepFunc | None = None
+) -> Callable[[Callable[[], StepList]], Workflow]:
+    """Transform an initial_input_form and a step list into a workflow.
+
+    Use this for modify workflows.
+
+    Example::
+
+        @modify_workflow("create service port") -> StepList:
+        def create_service_port():
+            do_something
+            >> do_something_else
+    """
+
+    wrapped_modify_initial_input_form_generator = wrap_modify_initial_input_form(initial_input_form)
+
+    def _modify_workflow(f: Callable[[], StepList]) -> Workflow:
+        steplist = (
+            init
+            >> store_process_subscription(Target.MODIFY)
+            >> unsync
+            >> f()
+            >> resync
+            >> done
+        )
+
+        return make_workflow(f, description, wrapped_modify_initial_input_form_generator, Target.MODIFY, steplist)
+
+    return _modify_workflow
+
+
+def terminate_workflow(
+    description: str, initial_input_form: InputStepFunc | None = None
+) -> Callable[[Callable[[], StepList]], Workflow]:
+    """Transform an initial_input_form and a step list into a workflow.
+
+    Use this for terminate workflows.
+
+    Example::
+
+        @terminate_workflow("create service port") -> StepList:
+        def create_service_port():
+            do_something
+            >> do_something_else
+    """
+
+    wrapped_terminate_initial_input_form_generator = wrap_modify_initial_input_form(initial_input_form)
+
+    def _terminate_workflow(f: Callable[[], StepList]) -> Workflow:
+        steplist = (
+            init
+            >> store_process_subscription(Target.TERMINATE)
+            >> unsync
+            >> f()
+            >> set_status(SubscriptionLifecycle.TERMINATED)
+            >> resync
+            >> done
+        )
+
+        return make_workflow(f, description, wrapped_terminate_initial_input_form_generator, Target.TERMINATE, steplist)
+
+    return _terminate_workflow
 
 
 def retrieve_subscription_list_by_product(product_type: str, status: List[str]) -> List[SubscriptionTable]:
