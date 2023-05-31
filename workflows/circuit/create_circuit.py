@@ -1,5 +1,4 @@
 """Workflow to initially create a circuit between two nodes."""
-from ipaddress import IPv6Interface
 from typing import Dict
 
 import structlog
@@ -19,7 +18,7 @@ from workflows.circuit.shared import (
     generate_interface_description,
     fetch_available_router_ports_by_name,
     render_circuit_endpoint_config,
-    CIRCUIT_PREFIX_IPAM_ID
+    CIRCUIT_PREFIX_IPAM_ID,
 )
 from workflows.shared import (
     CUSTOMER_UUID,
@@ -28,6 +27,7 @@ from workflows.shared import (
 )
 
 logger = structlog.get_logger(__name__)
+
 
 def initial_input_form_generator(product_name: str) -> FormGenerator:
     """

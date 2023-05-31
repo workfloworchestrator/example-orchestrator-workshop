@@ -1,3 +1,7 @@
+"""
+The home for all shared code used in the circuit workflows.
+"""
+
 from typing import List
 from ipaddress import IPv6Interface
 
@@ -11,7 +15,6 @@ logger = structlog.get_logger(__name__)
 # The ID of the Subnet Block we will use for assigning IPs to circuits
 CIRCUIT_PREFIX_IPAM_ID = 3
 ISIS_AREA_ID = "49.0001.0123.4567.890a.0001.00"
-
 
 
 def generate_circuit_description(
@@ -142,4 +145,3 @@ end
 !"""
 
     return router_config
-
