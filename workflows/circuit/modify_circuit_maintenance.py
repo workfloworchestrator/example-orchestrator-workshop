@@ -15,11 +15,11 @@ logger = get_logger(__name__)
 def modify_initial_input_form_generator(subscription_id: UUID) -> FormGenerator:
     subscription = Circuit.from_subscription(subscription_id)
 
-    class ChangeMaintenanceMode(FormPage):
+    class ChangeSpeed(FormPage):
         # add more options that can be changed.
-        under_maintenance: bool = subscription.circuit.under_maintenance
+        speed: int = subscription.speed
 
-    user_input = yield ChangeMaintenanceMode
+    user_input = yield ChangeSpeed
 
     logger.debug("User input is", user_input=user_input)
 
@@ -34,5 +34,5 @@ def modify(subscription: Circuit) -> State:
 
 
 @modify_workflow("Modify the circuit maintenance state", initial_input_form=modify_initial_input_form_generator)
-def modify_circuit() -> StepList:
+def modify_circuit_maintenance() -> StepList:
     return begin >> modify

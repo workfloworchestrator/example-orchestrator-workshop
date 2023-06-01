@@ -8,6 +8,6 @@
   "subscription": {},
   "subscription_instance": {},
   "workflow": {
-    "modify_circuit": "Modify the circuit"
+    "modify_circuit": "Modify the circuit maintenance state"
   }
 }
