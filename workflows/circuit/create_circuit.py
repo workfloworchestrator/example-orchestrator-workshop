@@ -2,23 +2,22 @@
 from typing import Dict
 
 import structlog
-from orchestrator.config.assignee import Assignee
-from orchestrator.forms import FormPage, ReadOnlyField
-from orchestrator.forms.validators import Accept, Choice, LongText
+from orchestrator.forms import FormPage
+from orchestrator.forms.validators import Choice
 from orchestrator.targets import Target
 from orchestrator.types import FormGenerator, State, SubscriptionLifecycle, UUIDstr
-from orchestrator.workflow import StepList, begin, inputstep, step
+from orchestrator.workflow import StepList, begin, step
 from orchestrator.workflows.steps import set_status, store_process_subscription
 
 from products.product_types.circuit import CircuitInactive, CircuitProvisioning
 from products.product_types.node import Node
 from utils import netbox
 from workflows.circuit.shared import (
+    CIRCUIT_PREFIX_IPAM_ID,
+    fetch_available_router_ports_by_name,
     generate_circuit_description,
     generate_interface_description,
-    fetch_available_router_ports_by_name,
-    render_circuit_endpoint_config,
-    CIRCUIT_PREFIX_IPAM_ID,
+    provide_config_to_user,
 )
 from workflows.shared import (
     CUSTOMER_UUID,
@@ -64,7 +63,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     router_a = yield RouterAForm
 
     # Now Remove previously used router from list and present new form.
-    choices.pop(str(router_a.router_a._name_))
+    choices.pop(str(router_a.router_a.name))
     EndpointB = Choice("Endpoint B", zip(choices, choices.values()))
 
     class RouterBForm(FormPage):
@@ -122,8 +121,8 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Done with CreateCircuitForm")
 
     return {
-        "router_a": router_a.router_a._name_,
-        "router_b": router_b.router_b._name_,
+        "router_a": router_a.router_a.name,
+        "router_b": router_b.router_b.name,
         "ports": ports,
     }
 
@@ -268,42 +267,6 @@ def reserve_ips_in_ipam(
     )
 
     return {"subscription": subscription}
-
-
-@inputstep("Provide Config to User", assignee=Assignee.SYSTEM)
-def provide_config_to_user(subscription: CircuitProvisioning) -> FormGenerator:
-    """
-    Renders and displays the config to a user so that they can paste it into a router.
-    """
-    logger.debug(
-        "Creating circuit payload for circuit",
-        circuit_id=subscription.circuit.circuit_id,
-    )
-    router_a_config = render_circuit_endpoint_config(
-        node=subscription.circuit.members[0].port.node.node_name,
-        interface=subscription.circuit.members[0].port.port_name,
-        description=subscription.circuit.members[0].port.port_description,
-        address=subscription.circuit.members[0].v6_ip_address,
-    )
-    router_b_config = render_circuit_endpoint_config(
-        node=subscription.circuit.members[1].port.node.node_name,
-        interface=subscription.circuit.members[1].port.port_name,
-        description=subscription.circuit.members[1].port.port_description,
-        address=subscription.circuit.members[1].v6_ip_address,
-    )
-
-    class ConfigResults(FormPage):
-        """FormPage for showing a user the config needed for a node"""
-
-        endpoint_a_router_config: LongText = ReadOnlyField(router_a_config)
-        endpoint_b_router_config: LongText = ReadOnlyField(router_b_config)
-        confirm_config_put_on_routers: Accept = Accept("INCOMPLETE")
-
-    logger.debug("Presenting ConfigResults Form to user")
-    form_data = yield ConfigResults
-    user_input = form_data.dict()
-    logger.debug("User confirmed router config, done with ConfigResults Form")
-    return user_input
 
 
 @step("Update Circuit Status in Netbox")

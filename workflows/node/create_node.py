@@ -130,21 +130,11 @@ copy running-config startup-config"""
     user_input = form_data.dict()
     return user_input
 
-
 @step("Update Node Data in Netbox")
 def update_node_status_netbox(
     subscription: NodeProvisioning,
 ) -> State:
     """Updates a node in netbox to be Active"""
-    logger.debug(
-        "Updating Node status in netbox", node_name=subscription.node.node_name
-    )
-    device = netbox.dcim.devices.get(name=subscription.node.node_name)
-    device.status = "active"
-    if not device.save():
-        raise RuntimeError(f"Could not save device status {device.__dict__}")
-    return {"netbox_device": device.name}
-
 
 @create_workflow(
     "Create Node",
