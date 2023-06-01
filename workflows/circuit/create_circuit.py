@@ -63,7 +63,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     router_a = yield RouterAForm
 
     # Now Remove previously used router from list and present new form.
-    choices.pop(str(router_a.router_a._name_))
+    choices.pop(str(router_a.router_a.name))
     EndpointB = Choice("Endpoint B", zip(choices, choices.values()))
 
     class RouterBForm(FormPage):
@@ -121,8 +121,8 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Done with CreateCircuitForm")
 
     return {
-        "router_a": router_a.router_a._name_,
-        "router_b": router_b.router_b._name_,
+        "router_a": router_a.router_a.name,
+        "router_b": router_b.router_b.name,
         "ports": ports,
     }
 
