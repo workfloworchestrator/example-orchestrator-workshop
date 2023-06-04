@@ -1,0 +1,92 @@
+#
+# This file describes the "Circuit" product from the advanced Orchestrator workshop
+#
+
+config:
+  create_summary_forms: false
+  send_email: false
+name: Circuit
+type: Circuit
+tag: CIRCUIT
+description: "point to point circuit"
+fixed_inputs:
+  - name: speed
+    type: enum
+    description: "service speed"
+    enum_type: int
+    values:
+      - key: ONEGIG
+        value: 1
+      - key: TENGIG
+        value: 10
+      - key: ONEHUDREDGIG
+        value: 100
+product_blocks:
+  - name: circuit
+    type: Circuit
+    tag: CIRCUIT
+    description: "circuit product block"
+    fields:
+      - name: members
+        type: list
+        description: "circuit interface members"
+        list_type: Layer3Interface
+        min_items: 2
+        max_items: 2
+      - name: circuit_id
+        type: int
+        description: "circuit id"
+        min_value: 1
+        max_value: 32_767
+        validations:
+          - id: circuit_id_must_be_unique
+            description: "circuit_id must be unique"
+        required: provisioning
+      - name: under_maintenance
+        type: bool
+        description: "circuit under maintenance"
+        required: provisioning
+  - name: layer3interface
+    type: Layer3Interface
+    tag: LAYER3iNTERFACE
+    description: "layer 3 interface product block"
+    fields:
+      - name: port
+        type: Port
+        description: "layer 3 interface port"
+      - name: v6_ip_address
+        type: ipaddress.IPv6Interface
+        description: "IPv6 address"
+        required: provisioning
+  - name: port
+    type: Port
+    tag: PORT
+    description: "port product block"
+    fields:
+      - name: port_id
+        type: int
+        min_value: 1
+        max_value: 32_767
+        description: "port id"
+        validations:
+          - id: port_id_must_be_unique
+            description: "port_id must be unique"
+        required: provisioning
+      - name: port_description
+        type: str
+        description: "port description"
+        required: provisioning
+      - name: port_name
+        type: str
+        description: "port name"
+        required: provisioning
+      - name: node
+        type: products.product_blocks.node.NodeBlock
+        description: "Node that port resides on"
+        required: provisioning
+
+workflows:
+  - name: terminate
+    validations:
+      - id: can_only_terminate_when_under_maintenance
+        description: "Delete the circuit only when placed under maintenance"
