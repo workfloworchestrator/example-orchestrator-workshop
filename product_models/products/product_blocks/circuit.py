@@ -9,6 +9,8 @@ from orchestrator.domain.base import SubscriptionInstanceList
 from pydantic import ConstrainedInt
 
 
+from products.product_blocks import Layer3InterfaceBlock, Layer3InterfaceBlockInactive, Layer3InterfaceBlockProvisioning
+
 from orchestrator.domain.base import ProductBlockModel, serializable_property
 from orchestrator.types import SubscriptionLifecycle
 
