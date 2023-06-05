@@ -110,9 +110,6 @@ tags
 # Pycharmd
 .idea/
 
-# Visual Studio Code
-.vscode/
-
 # Project specific
 *.css
 id_rsa
