@@ -4,7 +4,7 @@ from workflows.shared import is_active
 from orchestrator.types import State, UUIDstr
 from orchestrator.workflow import StepList, step
 from products.product_types.node import Node
-from utils import netbox
+from services.netbox import netbox
 
 
 @step("Load relevant Node subscription information")

@@ -11,12 +11,11 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 
 from products.product_types.circuit import CircuitInactive, CircuitProvisioning
 from products.product_types.node import Node
-from utils import netbox
+from products.services.description import description
+from services.netbox import netbox
 from workflows.circuit.shared import (
     CIRCUIT_PREFIX_IPAM_ID,
     fetch_available_router_ports_by_name,
-    generate_circuit_description,
-    generate_interface_description,
     provide_config_to_user,
 )
 from workflows.shared import (
@@ -173,39 +172,20 @@ def construct_circuit_model(
     subscription.circuit.members[1].port.node = router_b.node
 
     # Here, we construct the port product block portions of the domain model:
-    subscription.circuit.members[0].port.port_name = netbox_circuit.a_terminations[
-        0
-    ].display
-    subscription.circuit.members[1].port.port_name = netbox_circuit.b_terminations[
-        0
-    ].display
+    subscription.circuit.members[0].port.port_name = netbox_circuit.a_terminations[0].display
     subscription.circuit.members[0].port.port_id = netbox_circuit.a_terminations[0].id
-    port_a_description = generate_interface_description(
-        remote_device=subscription.circuit.members[1].port.node.node_name,
-        remote_port=subscription.circuit.members[1].port.port_name,
-    )
-    subscription.circuit.members[0].port.port_description = port_a_description
+    subscription.circuit.members[0].port.port_description = description(subscription.circuit.members[0])
 
+    subscription.circuit.members[1].port.port_name = netbox_circuit.b_terminations[0].display
     subscription.circuit.members[1].port.port_id = netbox_circuit.b_terminations[0].id
-    port_b_description = generate_interface_description(
-        remote_device=subscription.circuit.members[0].port.node.node_name,
-        remote_port=subscription.circuit.members[0].port.port_name,
-    )
-    subscription.circuit.members[1].port.port_description = port_b_description
+    subscription.circuit.members[1].port.port_description = description(subscription.circuit.members[1])
 
     # Generate the circuit description to be used by various later things
-    circuit_description = generate_circuit_description(
-        circuit_id=subscription.circuit.circuit_id,
-        a_side_device=subscription.circuit.members[0].port.node.node_name,
-        a_side_port=subscription.circuit.members[0].port.port_name,
-        b_side_device=subscription.circuit.members[1].port.node.node_name,
-        b_side_port=subscription.circuit.members[1].port.port_name,
-    )
-
-    subscription.circuit.circuit_description = circuit_description
+    subscription.circuit.circuit_description = description(subscription)
+    subscription.description = subscription.circuit.circuit_description
 
     # Update netbox's planned circuit with the circuit description
-    netbox_circuit.description = circuit_description
+    netbox_circuit.description = subscription.circuit.circuit_description
     netbox_circuit.save()
 
     return {
@@ -283,21 +263,6 @@ def update_circuit_status_netbox(
     return {"circuit_status": circuit.status}
 
 
-@step("Update Subscription Description")
-def update_subscription_description(
-    subscription: CircuitProvisioning,
-) -> State:
-    """
-    Update the subscription description to show the final circuit information.
-    """
-
-    subscription.description = (
-        f"Subscription for {subscription.circuit.circuit_description}"
-    )
-
-    return {"subscription": subscription}
-
-
 @create_workflow(
     "Create Circuit",
     initial_input_form=initial_input_form_generator,
@@ -313,5 +278,4 @@ def create_circuit() -> StepList:
         >> provide_config_to_user
         >> set_status(SubscriptionLifecycle.PROVISIONING)
         >> update_circuit_status_netbox
-        >> update_subscription_description
     )

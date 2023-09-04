@@ -11,7 +11,8 @@ from orchestrator.workflow import StepList, begin, step, inputstep
 from orchestrator.workflows.steps import set_status, store_process_subscription
 from orchestrator.config.assignee import Assignee
 from products.product_types.node import NodeInactive, NodeProvisioning
-from utils import netbox
+from products.services.description import description
+from services.netbox import netbox
 
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
@@ -72,7 +73,7 @@ def construct_node_model(
 
     subscription.node.node_id = node_id
     subscription.node.node_name = node_name
-    subscription.description = f"Node {node_name}"
+    subscription.description = description(subscription)
 
     return {
         "subscription": subscription,
