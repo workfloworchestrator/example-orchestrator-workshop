@@ -50,9 +50,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
         select_node_choice: NodeEnum  # type: ignore
 
     user_input = yield CreateNodeForm
-    node_data = next(
-        node for node in nodes if user_input.select_node_choice == node.name
-    )
+    node_data = next(node for node in nodes if user_input.select_node_choice == node.name)
 
     return {"node_id": node_data.id, "node_name": node_data.name}
 
@@ -131,11 +129,13 @@ copy running-config startup-config"""
     user_input = form_data.dict()
     return user_input
 
+
 @step("Update Node Data in Netbox")
 def update_node_status_netbox(
     subscription: NodeProvisioning,
 ) -> State:
     """Updates a node in netbox to be Active"""
+
 
 @create_workflow(
     "Create Node",

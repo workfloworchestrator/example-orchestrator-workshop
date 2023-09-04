@@ -22,12 +22,8 @@ from orchestrator.workflow import (
 from orchestrator.workflows.steps import resync, set_status, store_process_subscription, unsync
 from orchestrator.workflows.utils import wrap_create_initial_input_form, _generate_modify_form
 
-is_provisioning = conditional(
-    lambda state: state["subscription"]["status"] == SubscriptionLifecycle.PROVISIONING
-)
-is_active = conditional(
-    lambda state: state["subscription"]["status"] == SubscriptionLifecycle.ACTIVE
-)
+is_provisioning = conditional(lambda state: state["subscription"]["status"] == SubscriptionLifecycle.PROVISIONING)
+is_active = conditional(lambda state: state["subscription"]["status"] == SubscriptionLifecycle.ACTIVE)
 
 CUSTOMER_UUID = "b727dd2c-55f3-4d19-8452-a32f15b00123"
 
@@ -48,15 +44,11 @@ def create_workflow(
             do_something
             >> do_something_else
     """
-    create_initial_input_form_generator = wrap_create_initial_input_form(
-        initial_input_form
-    )
+    create_initial_input_form_generator = wrap_create_initial_input_form(initial_input_form)
 
     def _create_workflow(f: Callable[[], StepList]) -> Workflow:
         steplist = init >> f() >> set_status(status) >> resync >> done
-        return make_workflow(
-            f, description, create_initial_input_form_generator, Target.CREATE, steplist
-        )
+        return make_workflow(f, description, create_initial_input_form_generator, Target.CREATE, steplist)
 
     return _create_workflow
 
@@ -123,7 +115,7 @@ def modify_workflow(
             >> f()
             >> resync
             >> done
-        )
+        )  # fmt: skip
 
         return make_workflow(f, description, wrapped_modify_initial_input_form_generator, Target.MODIFY, steplist)
 
@@ -167,7 +159,7 @@ def retrieve_subscription_list_by_product(product_type: str, status: List[str]) 
     """
     retrieve_subscription_list_by_product This function lets you retreive a
     list of all subscriptions of a given product type. For example, you could
-    call this like so: 
+    call this like so:
 
     >>> retrieve_subscription_list_by_product("Node", [SubscriptionLifecycle.ACTIVE])
     [SubscriptionTable(su...note=None), SubscriptionTable(su...note=None)]
@@ -177,7 +169,7 @@ def retrieve_subscription_list_by_product(product_type: str, status: List[str]) 
 
     Args:
         product_type (str): The prouduct type in the DB (i.e. Node, User, etc.)
-        status (List[str]): The lifecycle states you want returned (i.e. 
+        status (List[str]): The lifecycle states you want returned (i.e.
         SubscriptionLifecycle.ACTIVE)
 
     Returns:

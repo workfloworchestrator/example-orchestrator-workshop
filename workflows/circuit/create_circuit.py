@@ -34,14 +34,10 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Generating initial input form for Circuit")
 
     # First, get the data we need to present a list of circuits to a user
-    node_subs = retrieve_subscription_list_by_product(
-        "Node", [SubscriptionLifecycle.ACTIVE]
-    )
+    node_subs = retrieve_subscription_list_by_product("Node", [SubscriptionLifecycle.ACTIVE])
     choices = {}
     for node in node_subs:
-        choices[str(node.subscription_id)] = Node.from_subscription(
-            node.subscription_id
-        ).node.node_name
+        choices[str(node.subscription_id)] = Node.from_subscription(node.subscription_id).node.node_name
 
     # choices = {"subid": "label", "subid2": "label"}
     EndpointA = Choice("Endpoint A", zip(choices, choices.values()))
@@ -148,16 +144,8 @@ def construct_circuit_model(
     # Next, we add the circuit details to the subscription
     logger.debug("Adding Base Circuit Model fields to Subscription")
 
-    a_port = list(
-        netbox.dcim.interfaces.filter(
-            device=router_a.node.node_name, name=ports["a_port"]
-        )
-    )[0]
-    b_port = list(
-        netbox.dcim.interfaces.filter(
-            device=router_b.node.node_name, name=ports["b_port"]
-        )
-    )[0]
+    a_port = list(netbox.dcim.interfaces.filter(device=router_a.node.node_name, name=ports["a_port"]))[0]
+    b_port = list(netbox.dcim.interfaces.filter(device=router_b.node.node_name, name=ports["b_port"]))[0]
     netbox_circuit = netbox.dcim.cables.create(
         a_terminations=[{"object_id": a_port.id, "object_type": "dcim.interface"}],
         b_terminations=[{"object_id": b_port.id, "object_type": "dcim.interface"}],

@@ -36,11 +36,7 @@ def fetch_available_router_ports_by_name(router_name: str) -> List[PynetboxInter
     Returns:
         List[PynetboxInterfaces]: a list of valid interfaces from netbox.
     """
-    valid_ports = list(
-        netbox.dcim.interfaces.filter(
-            device=router_name, occupied=False, speed=400000000
-        )
-    )
+    valid_ports = list(netbox.dcim.interfaces.filter(device=router_name, occupied=False, speed=400000000))
     logger.debug("Found ports in Netbox", amount=len(valid_ports))
     return valid_ports
 

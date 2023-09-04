@@ -21,9 +21,7 @@ class UserBlockInactive(
     user_id: Optional[int] = None
 
 
-class UserBlockProvisioning(
-    UserBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class UserBlockProvisioning(UserBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     group: UserGroupBlockProvisioning
     username: str
     age: Optional[int] = None

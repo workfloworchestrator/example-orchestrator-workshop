@@ -22,9 +22,7 @@ class CircuitInactive(SubscriptionModel, is_base=True):
     circuit: CircuitBlockInactive
 
 
-class CircuitProvisioning(
-    CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class CircuitProvisioning(CircuitInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     speed: Speed
     circuit: CircuitBlockProvisioning
 

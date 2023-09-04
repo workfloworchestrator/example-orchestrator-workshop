@@ -11,9 +11,7 @@ from services.netbox import netbox
 def load_node_subscription_info(subscription_id: UUIDstr) -> State:
     subscription = Node.from_subscription(subscription_id)
     nodes = netbox.dcim.get_devices()
-    node = next(
-        node for node in nodes if node.get("name") == subscription.node.node_name
-    )
+    node = next(node for node in nodes if node.get("name") == subscription.node.node_name)
     return {
         "subscription": subscription,
         "node": node,

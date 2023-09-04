@@ -8,15 +8,11 @@ from products.product_blocks.user_group import (
 )
 
 
-class UserGroupInactive(
-    SubscriptionModel, is_base=True, lifecycle=[SubscriptionLifecycle.INITIAL]
-):
+class UserGroupInactive(SubscriptionModel, is_base=True, lifecycle=[SubscriptionLifecycle.INITIAL]):
     user_group: UserGroupBlockInactive
 
 
-class UserGroupProvisioning(
-    UserGroupInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class UserGroupProvisioning(UserGroupInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     user_group: UserGroupBlockProvisioning
 
 

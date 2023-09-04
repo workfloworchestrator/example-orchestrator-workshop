@@ -18,9 +18,7 @@ class NodeBlockInactive(ProductBlockModel, product_block_name="Node"):
     ipv6_loopback: IPv6Address | None = None
 
 
-class NodeBlockProvisioning(
-    NodeBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class NodeBlockProvisioning(NodeBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Node Enrollment with optional fields to use in the provisioning lifecycle state."""
 
     node_id: int

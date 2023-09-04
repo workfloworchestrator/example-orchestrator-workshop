@@ -23,7 +23,6 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
 
 
 def _provision_in_group_management_system(user_group: str) -> int:
-
     return abs(hash(user_group))
 
 
@@ -57,7 +56,6 @@ def provision_user_group(subscription: UserGroupProvisioning, group_name: str) -
     target=Target.CREATE,
 )
 def create_user_group():
-
     return (
         init
         >> create_subscription

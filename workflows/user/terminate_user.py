@@ -33,7 +33,6 @@ def deprovision_user(subscription: User) -> None:
     target=Target.TERMINATE,
 )
 def terminate_user():
-
     return (
         init
         >> store_process_subscription(Target.TERMINATE)
