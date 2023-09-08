@@ -12,7 +12,8 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from orchestrator.config.assignee import Assignee
 from products.product_types.node import NodeInactive, NodeProvisioning
 from products.services.description import description
-from services.netbox import netbox
+from products.services.netbox.netbox import build_payload
+from services.netbox import netbox_get_planned_nodes_list, netbox_get_node, netbox_create_or_update
 
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
@@ -20,22 +21,12 @@ from workflows.shared import CUSTOMER_UUID, create_workflow
 logger = structlog.get_logger(__name__)
 
 
-def get_nodes_list() -> List[Any]:
-    """
-    Connects to netbox and returns a list of netbox device objects.
-    """
-    logger.debug("Connecting to Netbox to get list of available nodes")
-    node_list = list(netbox.dcim.devices.filter(status="planned"))
-    logger.debug("Found nodes in Netbox", amount=len(node_list))
-    return node_list
-
-
 def initial_input_form_generator(product_name: str) -> FormGenerator:
     """
     Generates the Node Form to display to the user.
     """
     logger.debug("Generating initial input form")
-    nodes = get_nodes_list()
+    nodes = netbox_get_planned_nodes_list()
     choices = [node.name for node in nodes]
     NodeEnum = Choice("Planned nodes", zip(choices, choices))  # type: ignore
 
@@ -52,7 +43,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     user_input = yield CreateNodeForm
     node_data = next(node for node in nodes if user_input.select_node_choice == node.name)
 
-    return {"node_id": node_data.id, "node_name": node_data.name}
+    return {"node_id": node_data.id, "node_name": node_data.name, "node_status": node_data.status.value}
 
 
 @step("Construct Node model")
@@ -60,6 +51,7 @@ def construct_node_model(
     product: UUIDstr,
     node_id: int,
     node_name: str,
+    node_status: str,
 ) -> State:
     """Creates the node model in it's initial state."""
     logger.debug("Constructing Node model for node", node_name=node_name)
@@ -71,6 +63,7 @@ def construct_node_model(
 
     subscription.node.node_id = node_id
     subscription.node.node_name = node_name
+    subscription.node.node_status = node_status
     subscription.description = description(subscription)
 
     return {
@@ -88,11 +81,9 @@ def fetch_ip_address_information(
         "Fetching detailed IP information for node from netbox",
         node_name=subscription.node.node_name,
     )
-    detailed_node = netbox.dcim.devices.get(name=subscription.node.node_name)
-    v4_network = ipaddress.ip_network(detailed_node.primary_ip4.address)
-    subscription.node.ipv4_loopback = ipaddress.IPv4Address(v4_network.network_address)
-    v6_network = ipaddress.ip_network(detailed_node.primary_ip6.address)
-    subscription.node.ipv6_loopback = ipaddress.IPv6Address(v6_network.network_address)
+    netbox_node = netbox_get_node(name=subscription.node.node_name)
+    subscription.node.ipv4_loopback = ipaddress.IPv4Network(netbox_node.primary_ip4.address)
+    subscription.node.ipv6_loopback = ipaddress.IPv6Network(netbox_node.primary_ip6.address)
 
     return {"subscription": subscription}
 
@@ -111,8 +102,8 @@ hostname {subscription.node.node_name}
 !
 interface loopback 0
 !
-ip address {subscription.node.ipv4_loopback} 255.255.255.55
-ipv6 address {subscription.node.ipv6_loopback}/128
+ip address {subscription.node.ipv4_loopback}
+ipv6 address {subscription.node.ipv6_loopback}
 !
 exit
 !
@@ -130,11 +121,22 @@ copy running-config startup-config"""
     return user_input
 
 
-@step("Update Node Data in Netbox")
-def update_node_status_netbox(
+@step("Set Node to active")
+def set_node_to_active(
     subscription: NodeProvisioning,
 ) -> State:
-    """Updates a node in netbox to be Active"""
+    """Updates a node to be Active"""
+    subscription.node.node_status = "active"
+    return {"subscription": subscription}
+
+
+@step("Update Node in Netbox")
+def update_node_in_netbox(
+    subscription: NodeProvisioning,
+) -> State:
+    """Updates a node in Netbox"""
+    netbox_payload = build_payload(subscription.node, subscription)
+    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox_create_or_update(netbox_payload)}
 
 
 @create_workflow(
@@ -143,7 +145,7 @@ def update_node_status_netbox(
     status=SubscriptionLifecycle.ACTIVE,
 )
 def create_node() -> StepList:
-    """Workflow steplist"""
+    """Workflow step list"""
     return (
         begin
         >> construct_node_model
@@ -151,5 +153,6 @@ def create_node() -> StepList:
         >> fetch_ip_address_information
         >> provide_config_to_user
         >> set_status(SubscriptionLifecycle.PROVISIONING)
-        >> update_node_status_netbox
+        >> set_node_to_active
+        >> update_node_in_netbox
     )
