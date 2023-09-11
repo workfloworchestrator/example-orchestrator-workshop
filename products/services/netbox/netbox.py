@@ -17,7 +17,7 @@ from orchestrator.domain.base import ProductBlockModel, SubscriptionModel
 
 from products.product_blocks.node import NodeBlockProvisioning
 from products.services.netbox.payload.node import build_node_payload
-from services.netbox import NetboxPayload, NetboxNodePayload
+from services.netbox import NetboxDevicePayload, NetboxPayload
 from utils.singledispatch import single_dispatch_base
 
 
@@ -45,5 +45,5 @@ def build_payload(model: ProductBlockModel, subscription: SubscriptionModel, **k
 
 
 @build_payload.register
-def _(model: NodeBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> NetboxNodePayload:
+def _(model: NodeBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> NetboxDevicePayload:
     return build_node_payload(model, subscription)

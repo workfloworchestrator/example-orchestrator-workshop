@@ -12,10 +12,11 @@
 # limitations under the License.
 from dataclasses import asdict, dataclass
 from functools import singledispatch
-from typing import Any, List
+from typing import Any, List, Optional
 
 import pynetbox  # type: ignore
 import structlog
+from pynetbox.core.endpoint import Endpoint
 from pynetbox.models.dcim import Devices
 from pynetbox.models.ipam import IpAddresses
 
@@ -38,21 +39,24 @@ class NetboxPayload:
 
 
 @dataclass
-class NetboxNodePayload(NetboxPayload):
-    name: str
-    status: str
-    primary_ip4: int
-    primary_ip6: int
+class NetboxDevicePayload(NetboxPayload):
+    site: int
+    device_type: int
+    device_role: int
+    name: Optional[str]
+    status: Optional[str]
+    primary_ip4: Optional[int]
+    primary_ip6: Optional[int]
 
 
-def netbox_get_node(name: str) -> Devices:
+def netbox_get_device(name: str) -> Devices:
     """
-    Get device from Netbox identified by id.
+    Get device from Netbox identified by name.
     """
     return netbox.dcim.devices.get(name=name)
 
 
-def netbox_get_planned_nodes_list() -> List[Devices]:
+def netbox_get_planned_devices_list() -> List[Devices]:
     """
     Get list of devices from netbox that are in planned state.
     """
@@ -90,24 +94,25 @@ def netbox_create_or_update(payload: NetboxPayload, **kwargs: Any) -> bool:
 
 
 @netbox_create_or_update.register
-def _(payload: NetboxNodePayload, **kwargs: Any) -> bool:
-    return netbox_create_or_update_node(payload)
+def _(payload: NetboxDevicePayload, **kwargs: Any) -> bool:
+    return _netbox_create_or_update_object(payload, endpoint=netbox.dcim.devices)
 
 
-def netbox_create_or_update_node(payload: NetboxNodePayload) -> bool:
+def _netbox_create_or_update_object(payload: NetboxDevicePayload, endpoint: Endpoint) -> bool:
     """
-    Create or update a node in Netbox.
+    Create or update an object in Netbox.
 
     Args:
-        payload: values to create or update node with
+        payload: values to create or update object
+        endpoint: a Netbox Endpoint
 
     Returns:
          True if the node was created or updated, False otherwise
     """
-    if not payload.id:  # create object in Netbox
-        raise ValueError("Create node object in Netbox not implemented")
-    else:  # update object in Netbox
-        if not (device := netbox.dcim.devices.get(payload.id)):
-            raise ValueError(f"Netbox object with id {payload.id} on netbox devices endpoint not found")
-        device.update(payload.dict())
-        return device.save()
+    if not payload.id:
+        return endpoint.create(payload.dict())
+    else:
+        if not (object := endpoint.get(payload.id)):
+            raise ValueError(f"Netbox object with id {payload.id} on netbox {endpoint.name} endpoint not found")
+        object.update(payload.dict())
+        return object.save()

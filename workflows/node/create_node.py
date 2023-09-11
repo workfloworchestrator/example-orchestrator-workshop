@@ -13,7 +13,7 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.node import NodeInactive, NodeProvisioning
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
-from services.netbox import netbox_create_or_update, netbox_get_node, netbox_get_planned_nodes_list
+from services.netbox import netbox_create_or_update, netbox_get_device, netbox_get_planned_devices_list
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
 logger = structlog.get_logger(__name__)
@@ -24,7 +24,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     Generates the Node Form to display to the user.
     """
     logger.debug("Generating initial input form")
-    nodes = netbox_get_planned_nodes_list()
+    nodes = netbox_get_planned_devices_list()
     choices = [node.name for node in nodes]
     NodeEnum = Choice("Planned nodes", zip(choices, choices))  # type: ignore
 
@@ -79,9 +79,9 @@ def fetch_ip_address_information(
         "Fetching detailed IP information for node from netbox",
         node_name=subscription.node.node_name,
     )
-    netbox_node = netbox_get_node(name=subscription.node.node_name)
-    subscription.node.ipv4_loopback = ipaddress.IPv4Network(netbox_node.primary_ip4.address)
-    subscription.node.ipv6_loopback = ipaddress.IPv6Network(netbox_node.primary_ip6.address)
+    device = netbox_get_device(name=subscription.node.node_name)
+    subscription.node.ipv4_loopback = ipaddress.IPv4Network(device.primary_ip4.address)
+    subscription.node.ipv6_loopback = ipaddress.IPv6Network(device.primary_ip6.address)
 
     return {"subscription": subscription}
 

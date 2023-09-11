@@ -12,20 +12,14 @@
 # limitations under the License.
 # from dataclasses import dataclass
 
-import structlog
 from orchestrator.domain import SubscriptionModel
 
 from products.product_blocks.node import NodeBlockProvisioning
-
-from services.netbox import NetboxNodePayload, netbox_get_ip
-
-logger = structlog.get_logger(__name__)
+from services.netbox import NetboxDevicePayload, netbox_get_device, netbox_get_ip
 
 
-def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionModel) -> NetboxNodePayload:
-    """Create and return an Netbox payload object for a :class:`~products.product_blocks.node.NodeBlockProvisioning`.
-
-    It makes calls to CRM and IMS to construct the object correctly.
+def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionModel) -> NetboxDevicePayload:
+    """Create and return a Netbox payload object for a :class:`~products.product_blocks.node.NodeBlockProvisioning`.
 
     Example payload::
 
@@ -41,15 +35,18 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
         model: NodeBlockProvisioning
         subscription: The Subscription that will be changed
 
-    Returns: :class:`Record`
+    Returns: :class:`NetboxDevicePayload`
 
     """
     if not model.node_id:
         raise ValueError("Build node payload not implemented for new nodes")
 
-    logger.info("in build_node_payload()")
+    device = netbox_get_device(model.node_name)
 
-    return NetboxNodePayload(
+    return NetboxDevicePayload(
+        site=device.site.id,  # not yet administrated in orchestrator
+        device_type=device.device_type.id,  # not yet administrated in orchestrator
+        device_role=device.device_type.id,  # not yet administrated in orchestrator
         id=model.node_id,
         name=model.node_name,
         status=model.node_status,
