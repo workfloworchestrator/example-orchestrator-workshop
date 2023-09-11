@@ -1,5 +1,5 @@
-from typing import TypeVar
 from ipaddress import IPv6Interface
+from typing import TypeVar
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle

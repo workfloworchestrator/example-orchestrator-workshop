@@ -14,7 +14,7 @@
 from functools import singledispatch
 from typing import Union
 
-from orchestrator.domain.base import ProductModel, SubscriptionModel, ProductBlockModel
+from orchestrator.domain.base import ProductBlockModel, ProductModel, SubscriptionModel
 
 from products.product_blocks.circuit import Layer3InterfaceInactive
 from products.product_types.circuit import CircuitInactive

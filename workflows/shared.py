@@ -1,5 +1,5 @@
 from inspect import isgeneratorfunction
-from typing import Callable, Optional, List, cast
+from typing import Callable, List, Optional, cast
 
 from orchestrator.db import (
     ProductTable,
@@ -9,18 +9,11 @@ from orchestrator.db import (
     SubscriptionTable,
 )
 from orchestrator.targets import Target
-from orchestrator.types import InputStepFunc, SubscriptionLifecycle, FormGenerator, State, InputForm, StateInputStepFunc
+from orchestrator.types import FormGenerator, InputForm, InputStepFunc, State, StateInputStepFunc, SubscriptionLifecycle
 from orchestrator.utils.state import form_inject_args
-from orchestrator.workflow import (
-    StepList,
-    Workflow,
-    done,
-    init,
-    make_workflow,
-    conditional,
-)
+from orchestrator.workflow import StepList, Workflow, conditional, done, init, make_workflow
 from orchestrator.workflows.steps import resync, set_status, store_process_subscription, unsync
-from orchestrator.workflows.utils import wrap_create_initial_input_form, _generate_modify_form
+from orchestrator.workflows.utils import _generate_modify_form, wrap_create_initial_input_form
 
 is_provisioning = conditional(lambda state: state["subscription"]["status"] == SubscriptionLifecycle.PROVISIONING)
 is_active = conditional(lambda state: state["subscription"]["status"] == SubscriptionLifecycle.ACTIVE)

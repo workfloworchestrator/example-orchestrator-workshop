@@ -18,11 +18,7 @@ from workflows.circuit.shared import (
     fetch_available_router_ports_by_name,
     provide_config_to_user,
 )
-from workflows.shared import (
-    CUSTOMER_UUID,
-    create_workflow,
-    retrieve_subscription_list_by_product,
-)
+from workflows.shared import CUSTOMER_UUID, create_workflow, retrieve_subscription_list_by_product
 
 logger = structlog.get_logger(__name__)
 

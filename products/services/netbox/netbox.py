@@ -16,8 +16,8 @@ from typing import Any
 from orchestrator.domain.base import ProductBlockModel, SubscriptionModel
 
 from products.product_blocks.node import NodeBlockProvisioning
-from products.services.netbox.payload.netbox_payload import NetboxPayload
-from products.services.netbox.payload.node import NetboxNodePayload, build_node_payload
+from products.services.netbox.payload.node import build_node_payload
+from services.netbox import NetboxPayload, NetboxNodePayload
 from utils.singledispatch import single_dispatch_base
 
 

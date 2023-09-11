@@ -3,11 +3,7 @@ from typing import Optional
 from orchestrator.domain.base import ProductBlockModel
 from orchestrator.types import SubscriptionLifecycle
 
-from products.product_blocks.user_group import (
-    UserGroupBlock,
-    UserGroupBlockInactive,
-    UserGroupBlockProvisioning,
-)
+from products.product_blocks.user_group import UserGroupBlock, UserGroupBlockInactive, UserGroupBlockProvisioning
 
 
 class UserBlockInactive(

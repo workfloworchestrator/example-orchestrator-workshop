@@ -2,7 +2,7 @@ from uuid import UUID
 
 from orchestrator import begin, step
 from orchestrator.forms import FormPage
-from orchestrator.types import State, FormGenerator
+from orchestrator.types import FormGenerator, State
 from orchestrator.workflow import StepList
 from structlog import get_logger
 

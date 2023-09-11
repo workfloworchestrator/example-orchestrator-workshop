@@ -1,22 +1,20 @@
 """Workflow to initially provision a node."""
-from typing import Any, List
 import ipaddress
 
 import structlog
+from orchestrator.config.assignee import Assignee
 from orchestrator.forms import FormPage, ReadOnlyField
-from orchestrator.forms.validators import Choice, Accept, LongText
+from orchestrator.forms.validators import Accept, Choice, LongText
 from orchestrator.targets import Target
 from orchestrator.types import FormGenerator, State, SubscriptionLifecycle, UUIDstr
-from orchestrator.workflow import StepList, begin, step, inputstep
+from orchestrator.workflow import StepList, begin, inputstep, step
 from orchestrator.workflows.steps import set_status, store_process_subscription
-from orchestrator.config.assignee import Assignee
+
 from products.product_types.node import NodeInactive, NodeProvisioning
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
-from services.netbox import netbox_get_planned_nodes_list, netbox_get_node, netbox_create_or_update
-
+from services.netbox import netbox_create_or_update, netbox_get_node, netbox_get_planned_nodes_list
 from workflows.shared import CUSTOMER_UUID, create_workflow
-
 
 logger = structlog.get_logger(__name__)
 

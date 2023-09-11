@@ -10,30 +10,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from ipaddress import IPv4Address, IPv6Address
+# from dataclasses import dataclass
 
 import structlog
 from orchestrator.domain import SubscriptionModel
 
 from products.product_blocks.node import NodeBlockProvisioning
-from products.services.netbox.payload.netbox_payload import NetboxPayload
 
-from dataclasses import dataclass
-
-from services.netbox import netbox_get_ip
-
-# from services.netbox import netbox
-
+from services.netbox import NetboxNodePayload, netbox_get_ip
 
 logger = structlog.get_logger(__name__)
-
-
-@dataclass
-class NetboxNodePayload(NetboxPayload):
-    name: str
-    status: str
-    primary_ip4: str
-    primary_ip6: str
 
 
 def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionModel) -> NetboxNodePayload:
@@ -44,9 +30,11 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
     Example payload::
 
         {
-            id: 7,
-            name: 'loc1-core',
-            status: 'active'
+           "id": 11,
+           "name": "loc5-core",
+           "status": "active",
+           "primary_ip4": 8,
+           "primary_ip6": 11
         }
 
     Args:
@@ -63,7 +51,6 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
 
     return NetboxNodePayload(
         id=model.node_id,
-        endpoint="devices",
         name=model.node_name,
         status=model.node_status,
         primary_ip4=netbox_get_ip(str(model.ipv4_loopback)).id,

@@ -10,14 +10,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
+from dataclasses import asdict, dataclass
+from functools import singledispatch
+from typing import Any, List
 
 import pynetbox  # type: ignore
 import structlog
 from pynetbox.models.dcim import Devices
 from pynetbox.models.ipam import IpAddresses
 
-from products.services.netbox.payload.netbox_payload import NetboxPayload
+from utils.singledispatch import single_dispatch_base
 
 logger = structlog.get_logger(__name__)
 
@@ -25,6 +27,22 @@ netbox = pynetbox.api(
     "http://netbox:8080",
     token="e744057d755255a31818bf74df2350c26eeabe54",
 )  # fmt: skip
+
+
+@dataclass
+class NetboxPayload:
+    id: int  # all objects on any endpoint have a unique id
+
+    def dict(self):
+        return asdict(self)
+
+
+@dataclass
+class NetboxNodePayload(NetboxPayload):
+    name: str
+    status: str
+    primary_ip4: int
+    primary_ip6: int
 
 
 def netbox_get_node(name: str) -> Devices:
@@ -51,28 +69,45 @@ def netbox_get_ip(address: str) -> IpAddresses:
     return netbox.ipam.ip_addresses.get(address=address)
 
 
-def netbox_create_or_update(payload: NetboxPayload) -> bool:
-    """
-    Create or update object on payload.endpoint in Netbox.
+@singledispatch
+def netbox_create_or_update(payload: NetboxPayload, **kwargs: Any) -> bool:
+    """Create or update object described by payload in Netbox (generic function).
+
+    Specific implementations of this generic function will specify the payload types they work on.
 
     Args:
-        payload: values to update object with on payload.endpoint
+        payload: Netbox object specific payload.
 
     Returns:
-         True if the object was updated, False otherwise
+        True if the object was created or updated successfully in Netbox, False otherwise.
+
+    Raises:
+        TypeError: in case a specific implementation could not be found. The payload it was called for will be
+            part of the error message.
+
     """
-    if not payload.id:
-        raise ValueError("Create devices object in Netbox not implemented")
+    return single_dispatch_base(netbox_create_or_update, payload)
 
-    if payload.endpoint == 'devices':
-        endpoint = netbox.dcim.devices
-    else:
-        raise ValueError(f"Netbox endpoint {payload.endpoint} not implemented")
 
-    if not (netbox_object := endpoint.get(payload.id)):
-        raise ValueError(f"Netbox object with id {payload.id} on endpoint {payload.endpoint} not found")
+@netbox_create_or_update.register
+def _(payload: NetboxNodePayload, **kwargs: Any) -> bool:
+    return netbox_create_or_update_node(payload)
 
-    update_dict = payload.dict()
-    update_dict.pop("endpoint")  # remove because it is not a genuine Netbox Endpoint object
-    netbox_object.update(update_dict)
-    return netbox_object.save()
+
+def netbox_create_or_update_node(payload: NetboxNodePayload) -> bool:
+    """
+    Create or update a node in Netbox.
+
+    Args:
+        payload: values to create or update node with
+
+    Returns:
+         True if the node was created or updated, False otherwise
+    """
+    if not payload.id:  # create object in Netbox
+        raise ValueError("Create node object in Netbox not implemented")
+    else:  # update object in Netbox
+        if not (device := netbox.dcim.devices.get(payload.id)):
+            raise ValueError(f"Netbox object with id {payload.id} on netbox devices endpoint not found")
+        device.update(payload.dict())
+        return device.save()
