@@ -15,7 +15,7 @@
 from orchestrator.domain import SubscriptionModel
 
 from products.product_blocks.node import NodeBlockProvisioning
-from services.netbox import NetboxDevicePayload, netbox_get_device, netbox_get_ip
+from services.netbox import NetboxDevicePayload, netbox_get_device, netbox_get_ip_address
 
 
 def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionModel) -> NetboxDevicePayload:
@@ -24,11 +24,14 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
     Example payload::
 
         {
-           "id": 11,
-           "name": "loc5-core",
+           "id": 7,
+           "name": "loc1-core",
+           "site": 1,
            "status": "active",
-           "primary_ip4": 8,
-           "primary_ip6": 11
+           "device_role": 1,
+           "device_type": 1,
+           "primary_ip4": 2,
+           "primary_ip6": 3
         }
 
     Args:
@@ -50,6 +53,6 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
         id=model.node_id,
         name=model.node_name,
         status=model.node_status,
-        primary_ip4=netbox_get_ip(str(model.ipv4_loopback)).id,
-        primary_ip6=netbox_get_ip(str(model.ipv6_loopback)).id,
+        primary_ip4=netbox_get_ip_address(str(model.ipv4_loopback)).id,
+        primary_ip6=netbox_get_ip_address(str(model.ipv6_loopback)).id,
     )

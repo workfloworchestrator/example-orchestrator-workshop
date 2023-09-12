@@ -13,7 +13,7 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.node import NodeInactive, NodeProvisioning
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
-from services.netbox import netbox_create_or_update, netbox_get_device, netbox_get_planned_devices_list
+from services.netbox import netbox_create_or_update, netbox_get_device, netbox_get_devices
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
 logger = structlog.get_logger(__name__)
@@ -24,7 +24,7 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     Generates the Node Form to display to the user.
     """
     logger.debug("Generating initial input form")
-    nodes = netbox_get_planned_devices_list()
+    nodes = netbox_get_devices(status="planned")
     choices = [node.name for node in nodes]
     NodeEnum = Choice("Planned nodes", zip(choices, choices))  # type: ignore
 
@@ -51,7 +51,7 @@ def construct_node_model(
     node_name: str,
     node_status: str,
 ) -> State:
-    """Creates the node model in it's initial state."""
+    """Creates the node model in its initial state."""
     logger.debug("Constructing Node model for node", node_name=node_name)
     subscription = NodeInactive.from_product_id(
         product_id=product,

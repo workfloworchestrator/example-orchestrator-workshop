@@ -14,9 +14,10 @@ from dataclasses import asdict, dataclass
 from functools import singledispatch
 from typing import Any, List, Optional
 
-import pynetbox  # type: ignore
 import structlog
+from pynetbox import api
 from pynetbox.core.endpoint import Endpoint
+from pynetbox.core.query import RequestError
 from pynetbox.models.dcim import Devices
 from pynetbox.models.ipam import IpAddresses
 
@@ -24,7 +25,7 @@ from utils.singledispatch import single_dispatch_base
 
 logger = structlog.get_logger(__name__)
 
-netbox = pynetbox.api(
+netbox = api(
     "http://netbox:8080",
     token="e744057d755255a31818bf74df2350c26eeabe54",
 )  # fmt: skip
@@ -34,15 +35,18 @@ netbox = pynetbox.api(
 class NetboxPayload:
     id: int  # all objects on any endpoint have a unique id
 
+    # return payload as a dict that is suitable to be used on pynetbox .create() or .updates().
     def dict(self):
         return asdict(self)
 
 
 @dataclass
 class NetboxDevicePayload(NetboxPayload):
+    # mandatory fields to create Devices object in Netbox:
     site: int
     device_type: int
     device_role: int
+    # optional fields:
     name: Optional[str]
     status: Optional[str]
     primary_ip4: Optional[int]
@@ -56,19 +60,22 @@ def netbox_get_device(name: str) -> Devices:
     return netbox.dcim.devices.get(name=name)
 
 
-def netbox_get_planned_devices_list() -> List[Devices]:
+def netbox_get_devices(status: Optional[str] = None) -> List[Devices]:
     """
-    Get list of devices from netbox that are in planned state.
+    Get list of Devices objects from netbox, optionally filtered by status.
     """
-    logger.debug("Connecting to Netbox to get list of available nodes")
-    node_list = list(netbox.dcim.devices.filter(status="planned"))
+    logger.debug("Connecting to Netbox to get list of devices")
+    if status:
+        node_list = list(netbox.dcim.devices.filter(status=status))
+    else:
+        node_list = list(netbox.dcim.devices.all())
     logger.debug("Found nodes in Netbox", amount=len(node_list))
     return node_list
 
 
-def netbox_get_ip(address: str) -> IpAddresses:
+def netbox_get_ip_address(address: str) -> IpAddresses:
     """
-    Get IP address from Netbox identified by address.
+    Get IP IpAddress object from Netbox identified by address.
     """
     return netbox.ipam.ip_addresses.get(address=address)
 
@@ -110,7 +117,13 @@ def _netbox_create_or_update_object(payload: NetboxDevicePayload, endpoint: Endp
          True if the node was created or updated, False otherwise
     """
     if not payload.id:
-        return endpoint.create(payload.dict())
+        try:
+            endpoint.create(payload.dict())
+        except RequestError as exc:
+            logger.warning("Netbox create failed", payload=payload, exc=str(exc))
+            return False
+        else:
+            return True
     else:
         if not (object := endpoint.get(payload.id)):
             raise ValueError(f"Netbox object with id {payload.id} on netbox {endpoint.name} endpoint not found")
