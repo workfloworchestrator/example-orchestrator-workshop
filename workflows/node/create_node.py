@@ -13,18 +13,16 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.node import NodeInactive, NodeProvisioning
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
-from services.netbox import netbox_get_device, netbox_get_devices, netbox_update
+from services import netbox
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
 logger = structlog.get_logger(__name__)
 
 
 def initial_input_form_generator(product_name: str) -> FormGenerator:
-    """
-    Generates the Node Form to display to the user.
-    """
+    """Generates the Node Form to display to the user."""
     logger.debug("Generating initial input form")
-    nodes = netbox_get_devices(status="planned")
+    nodes = netbox.get_devices(status="planned")
     choices = [node.name for node in nodes]
     NodeEnum = Choice("Planned nodes", zip(choices, choices))  # type: ignore
 
@@ -71,15 +69,13 @@ def construct_node_model(
 
 
 @step("Fetch Detailed IP information")
-def fetch_ip_address_information(
-    subscription: NodeInactive,
-) -> State:
+def fetch_ip_address_information(subscription: NodeInactive) -> State:
     """Grabs the IP address information for the node and puts it on the domain model."""
     logger.debug(
         "Fetching detailed IP information for node from netbox",
         node_name=subscription.node.node_name,
     )
-    device = netbox_get_device(name=subscription.node.node_name)
+    device = netbox.get_device(name=subscription.node.node_name)
     subscription.node.ipv4_loopback = ipaddress.IPv4Network(device.primary_ip4.address)
     subscription.node.ipv6_loopback = ipaddress.IPv6Network(device.primary_ip6.address)
 
@@ -120,28 +116,20 @@ copy running-config startup-config"""
 
 
 @step("Set Node to active")
-def set_node_to_active(
-    subscription: NodeProvisioning,
-) -> State:
+def set_node_to_active(subscription: NodeProvisioning) -> State:
     """Updates a node to be Active"""
     subscription.node.node_status = "active"
     return {"subscription": subscription}
 
 
 @step("Update Node in Netbox")
-def update_node_in_netbox(
-    subscription: NodeProvisioning,
-) -> State:
+def update_node_in_netbox(subscription: NodeProvisioning) -> State:
     """Updates a node in Netbox"""
     netbox_payload = build_payload(subscription.node, subscription)
-    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox_update(netbox_payload)}
+    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox.update(netbox_payload)}
 
 
-@create_workflow(
-    "Create Node",
-    initial_input_form=initial_input_form_generator,
-    status=SubscriptionLifecycle.ACTIVE,
-)
+@create_workflow("Create Node", initial_input_form=initial_input_form_generator, status=SubscriptionLifecycle.ACTIVE)
 def create_node() -> StepList:
     """Workflow step list"""
     return (

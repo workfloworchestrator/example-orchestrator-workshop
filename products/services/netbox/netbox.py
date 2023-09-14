@@ -19,12 +19,12 @@ from products.product_blocks.circuit import CircuitBlockProvisioning
 from products.product_blocks.node import NodeBlockProvisioning
 from products.services.netbox.payload.circuit import build_circuit_payload
 from products.services.netbox.payload.node import build_node_payload
-from services.netbox import NetboxCablePayload, NetboxDevicePayload, NetboxPayload
+from services import netbox
 from utils.singledispatch import single_dispatch_base
 
 
 @singledispatch
-def build_payload(model: ProductBlockModel, subscription: SubscriptionModel, **kwargs: Any) -> NetboxPayload:
+def build_payload(model: ProductBlockModel, subscription: SubscriptionModel, **kwargs: Any) -> netbox.NetboxPayload:
     """Build payload for Netbox (generic function).
 
     Specific implementations of this generic function will specify the model types they work on and the payload types
@@ -47,10 +47,10 @@ def build_payload(model: ProductBlockModel, subscription: SubscriptionModel, **k
 
 
 @build_payload.register
-def _(model: NodeBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> NetboxDevicePayload:
+def _(model: NodeBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> netbox.DevicePayload:
     return build_node_payload(model, subscription)
 
 
 @build_payload.register
-def _(model: CircuitBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> NetboxCablePayload:
+def _(model: CircuitBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> netbox.CablePayload:
     return build_circuit_payload(model, subscription)

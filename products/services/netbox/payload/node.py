@@ -15,10 +15,10 @@
 from orchestrator.domain import SubscriptionModel
 
 from products.product_blocks.node import NodeBlockProvisioning
-from services.netbox import NetboxDevicePayload, netbox_get_device, netbox_get_ip_address
+from services import netbox
 
 
-def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionModel) -> NetboxDevicePayload:
+def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionModel) -> netbox.DevicePayload:
     """Create and return a Netbox payload object for a :class:`~products.product_blocks.node.NodeBlockProvisioning`.
 
     Example payload::
@@ -38,22 +38,22 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
         model: NodeBlockProvisioning
         subscription: The Subscription that will be changed
 
-    Returns: :class:`NetboxDevicePayload`
+    Returns: :class:`netbox.DevicePayload`
 
     """
     if not model.node_id:
         raise ValueError("Build node payload not implemented for new nodes")
 
     # device is not created by the orchestrator, fetch needed fields from Netbox
-    device = netbox_get_device(model.node_name)
+    device = netbox.get_device(model.node_name)
 
-    return NetboxDevicePayload(
+    return netbox.DevicePayload(
         site=device.site.id,  # not yet administrated in orchestrator
         device_type=device.device_type.id,  # not yet administrated in orchestrator
         device_role=device.device_type.id,  # not yet administrated in orchestrator
         id=model.node_id if model.node_id else -1,
         name=model.node_name,
         status=model.node_status,
-        primary_ip4=netbox_get_ip_address(str(model.ipv4_loopback)).id,
-        primary_ip6=netbox_get_ip_address(str(model.ipv6_loopback)).id,
+        primary_ip4=netbox.get_ip_address(str(model.ipv4_loopback)).id,
+        primary_ip6=netbox.get_ip_address(str(model.ipv6_loopback)).id,
     )

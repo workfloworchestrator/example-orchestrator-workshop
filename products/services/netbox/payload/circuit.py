@@ -15,10 +15,10 @@
 from orchestrator.domain import SubscriptionModel
 
 from products.product_blocks.circuit import CircuitBlockProvisioning
-from services.netbox import NetboxCablePayload, NetboxCableTerminationPayload
+from services import netbox
 
 
-def build_circuit_payload(model: CircuitBlockProvisioning, subscription: SubscriptionModel) -> NetboxCablePayload:
+def build_circuit_payload(model: CircuitBlockProvisioning, subscription: SubscriptionModel) -> netbox.CablePayload:
     """Create and return a Netbox payload object for a :class:`~products.product_types.circuit.CircuitInactive`.
 
     Example payload::
@@ -45,12 +45,12 @@ def build_circuit_payload(model: CircuitBlockProvisioning, subscription: Subscri
         model: CircuitInactive
         subscription: The Subscription that will be changed
 
-    Returns: :class:`NetboxCablePayload`
+    Returns: :class:`netbox.CablePayload`
     """
-    return NetboxCablePayload(
+    return netbox.CablePayload(
         id=model.circuit_id if model.circuit_id else -1,
         status=model.circuit_status,
         description=model.circuit_description,
-        a_terminations=[NetboxCableTerminationPayload(object_id=model.members[0].port.port_id)],
-        b_terminations=[NetboxCableTerminationPayload(object_id=model.members[1].port.port_id)],
+        a_terminations=[netbox.CableTerminationPayload(object_id=model.members[0].port.port_id)],
+        b_terminations=[netbox.CableTerminationPayload(object_id=model.members[1].port.port_id)],
     )

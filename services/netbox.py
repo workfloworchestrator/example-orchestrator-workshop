@@ -43,7 +43,7 @@ class NetboxPayload:
 
 
 @dataclass
-class NetboxDevicePayload(NetboxPayload):
+class DevicePayload(NetboxPayload):
     # mandatory fields to create Devices object in Netbox:
     site: int
     device_type: int
@@ -56,42 +56,42 @@ class NetboxDevicePayload(NetboxPayload):
 
 
 @dataclass
-class NetboxCableTerminationPayload:
+class CableTerminationPayload:
     object_id: int
     object_type: str = "dcim.interface"
 
 
 @dataclass
-class NetboxCablePayload(NetboxPayload):
+class CablePayload(NetboxPayload):
     status: str
     description: Optional[str]
-    a_terminations: List[NetboxCableTerminationPayload]
-    b_terminations: List[NetboxCableTerminationPayload]
+    a_terminations: List[CableTerminationPayload]
+    b_terminations: List[CableTerminationPayload]
 
 
 @dataclass
-class NetboxAvailablePrefixPayload:
+class AvailablePrefixPayload:
     prefix_length: int
     description: str
     is_pool: Optional[bool] = False
 
 
 @dataclass
-class NetboxAvailableIpPayload:
+class AvailableIpPayload:
     description: str
     assigned_object_id: int
     assigned_object_type: Optional[str] = "dcim.interface"
     status: Optional[str] = "active"
 
 
-def netbox_get_device(name: str) -> Devices:
+def get_device(name: str) -> Devices:
     """
     Get device from Netbox identified by name.
     """
     return netbox.dcim.devices.get(name=name)
 
 
-def netbox_get_devices(status: Optional[str] = None) -> List[Devices]:
+def get_devices(status: Optional[str] = None) -> List[Devices]:
     """
     Get list of Devices objects from netbox, optionally filtered by status.
     """
@@ -105,7 +105,7 @@ def netbox_get_devices(status: Optional[str] = None) -> List[Devices]:
 
 
 # TODO: make this a more generic function
-def netbox_get_available_router_ports_by_name(router_name: str) -> List[PynetboxInterfaces]:
+def get_available_router_ports_by_name(router_name: str) -> List[PynetboxInterfaces]:
     """
     get_available_router_ports_by_name fetches a list of available ports from netbox
         when given the name of a router. To be considered available, the port must be:
@@ -124,39 +124,39 @@ def netbox_get_available_router_ports_by_name(router_name: str) -> List[Pynetbox
     return valid_ports
 
 
-def netbox_get_interface_by_device_and_name(device: str, name: str) -> Interfaces:
+def get_interface_by_device_and_name(device: str, name: str) -> Interfaces:
     """
     Get Interfaces object from Netbox identified by device and name.
     """
     return next(netbox.dcim.interfaces.filter(device=device, name=name))
 
 
-def netbox_get_ip_address(address: str) -> IpAddresses:
+def get_ip_address(address: str) -> IpAddresses:
     """
     Get IpAddresses object from Netbox identified by address.
     """
     return netbox.ipam.ip_addresses.get(address=address)
 
 
-def netbox_get_ip_prefix_by_id(id: int) -> Prefixes:
+def get_ip_prefix_by_id(id: int) -> Prefixes:
     """
     Get Prefixes object from Netbox identified by id.
     """
     return netbox.ipam.prefixes.get(id)
 
 
-def netbox_create_available_prefix(parent_id: int, payload: NetboxAvailablePrefixPayload) -> Prefixes:
-    parent_prefix = netbox_get_ip_prefix_by_id(parent_id)
+def create_available_prefix(parent_id: int, payload: AvailablePrefixPayload) -> Prefixes:
+    parent_prefix = get_ip_prefix_by_id(parent_id)
     return parent_prefix.available_prefixes.create(asdict(payload))
 
 
-def netbox_create_available_ip(parent_id: int, payload: NetboxAvailableIpPayload) -> IpAddresses:
-    parent_prefix = netbox_get_ip_prefix_by_id(parent_id)
+def create_available_ip(parent_id: int, payload: AvailableIpPayload) -> IpAddresses:
+    parent_prefix = get_ip_prefix_by_id(parent_id)
     return parent_prefix.available_ips.create(asdict(payload))
 
 
 @singledispatch
-def netbox_create(payload: NetboxPayload, **kwargs: Any) -> int:
+def create(payload: NetboxPayload, **kwargs: Any) -> int:
     """Create object described by payload in Netbox (generic function).
 
     Specific implementations of this generic function will specify the payload types they work on.
@@ -172,11 +172,11 @@ def netbox_create(payload: NetboxPayload, **kwargs: Any) -> int:
             part of the error message.
 
     """
-    return single_dispatch_base(netbox_create, payload)
+    return single_dispatch_base(create, payload)
 
 
 @singledispatch
-def netbox_update(payload: NetboxPayload, **kwargs: Any) -> bool:
+def update(payload: NetboxPayload, **kwargs: Any) -> bool:
     """Update object described by payload in Netbox (generic function).
 
     Specific implementations of this generic function will specify the payload types they work on.
@@ -192,25 +192,25 @@ def netbox_update(payload: NetboxPayload, **kwargs: Any) -> bool:
             part of the error message.
 
     """
-    return single_dispatch_base(netbox_update, payload)
+    return single_dispatch_base(update, payload)
 
 
-@netbox_update.register
-def _(payload: NetboxDevicePayload, **kwargs: Any) -> bool:
-    return _netbox_update_object(payload, endpoint=netbox.dcim.devices)
+@update.register
+def _(payload: DevicePayload, **kwargs: Any) -> bool:
+    return _update_object(payload, endpoint=netbox.dcim.devices)
 
 
-@netbox_create.register
-def _(payload: NetboxCablePayload, **kwargs: Any) -> bool:
-    return _netbox_create_object(payload, endpoint=netbox.dcim.cables)
+@create.register
+def _(payload: CablePayload, **kwargs: Any) -> bool:
+    return _create_object(payload, endpoint=netbox.dcim.cables)
 
 
-@netbox_update.register
-def _(payload: NetboxCablePayload, **kwargs: Any) -> bool:
-    return _netbox_update_object(payload, endpoint=netbox.dcim.cables)
+@update.register
+def _(payload: CablePayload, **kwargs: Any) -> bool:
+    return _update_object(payload, endpoint=netbox.dcim.cables)
 
 
-def _netbox_create_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
+def _create_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
     """
     Create an object in Netbox.
 
@@ -233,7 +233,7 @@ def _netbox_create_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
         return object.id
 
 
-def _netbox_update_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
+def _update_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
     """
     Create or update an object in Netbox.
 

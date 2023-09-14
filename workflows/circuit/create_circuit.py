@@ -13,16 +13,7 @@ from products.product_types.circuit import CircuitInactive, CircuitProvisioning
 from products.product_types.node import Node
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
-from services.netbox import (
-    NetboxAvailableIpPayload,
-    NetboxAvailablePrefixPayload,
-    netbox_create,
-    netbox_create_available_ip,
-    netbox_create_available_prefix,
-    netbox_get_available_router_ports_by_name,
-    netbox_get_interface_by_device_and_name,
-    netbox_update,
-)
+from services import netbox
 from workflows.circuit.shared import CIRCUIT_PREFIX_IPAM_ID, provide_config_to_user
 from workflows.shared import CUSTOMER_UUID, create_workflow, retrieve_subscription_list_by_product
 
@@ -81,10 +72,10 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     # b_port_list = ["2/1/c1/1", "1/1/c2/1"]
 
     a_port_list = {}
-    for port in netbox_get_available_router_ports_by_name(router_name=router_a.router_a):
+    for port in netbox.get_available_router_ports_by_name(router_name=router_a.router_a):
         a_port_list[str(port.id)] = port.display
     b_port_list = {}
-    for port in netbox_get_available_router_ports_by_name(router_name=router_b.router_b):
+    for port in netbox.get_available_router_ports_by_name(router_name=router_b.router_b):
         b_port_list[str(port.id)] = port.display
 
     APort = Choice(
@@ -146,8 +137,8 @@ def construct_circuit_model(
     # Next, we add the circuit details to the subscription
     logger.debug("Adding Base Circuit Model fields to Subscription")
 
-    a_port = netbox_get_interface_by_device_and_name(device=router_a.node.node_name, name=ports["a_port"])
-    b_port = netbox_get_interface_by_device_and_name(device=router_b.node.node_name, name=ports["b_port"])
+    a_port = netbox.get_interface_by_device_and_name(device=router_a.node.node_name, name=ports["a_port"])
+    b_port = netbox.get_interface_by_device_and_name(device=router_b.node.node_name, name=ports["b_port"])
 
     # Add A-side and B-side to the circuit subscription:
     subscription.circuit.members[0].port.node = router_a.node
@@ -176,9 +167,9 @@ def reserve_ips_in_ipam(subscription: CircuitInactive) -> State:
     """
     logger.debug("Reserving IPs in NetBox")
     # # First, reserve a /64 pool for future use.
-    current_circuit_prefix_64 = netbox_create_available_prefix(
+    current_circuit_prefix_64 = netbox.create_available_prefix(
         parent_id=CIRCUIT_PREFIX_IPAM_ID,
-        payload=NetboxAvailablePrefixPayload(
+        payload=netbox.AvailablePrefixPayload(
             prefix_length=64,
             description=f"{subscription.circuit.circuit_description} Parent /64",
             is_pool=True,
@@ -186,24 +177,24 @@ def reserve_ips_in_ipam(subscription: CircuitInactive) -> State:
     )
 
     # Next, reserve a /127 point-to-point subnet for the circuit (from the above /64).
-    current_circuit_prefix_127 = netbox_create_available_prefix(  # TODO
+    current_circuit_prefix_127 = netbox.create_available_prefix(  # TODO
         parent_id=current_circuit_prefix_64.id,
-        payload=NetboxAvailablePrefixPayload(
+        payload=netbox.AvailablePrefixPayload(
             prefix_length=127,
             description=f"{subscription.circuit.circuit_description} Point-to-Point",
         ),
     )
     # Now, create the NetBox IP Address entries for the devices on each side of the link:
-    a_side_ip = netbox_create_available_ip(
+    a_side_ip = netbox.create_available_ip(
         parent_id=current_circuit_prefix_127.id,
-        payload=NetboxAvailableIpPayload(
+        payload=netbox.AvailableIpPayload(
             description=subscription.circuit.members[0].port.port_description,
             assigned_object_id=subscription.circuit.members[0].port.port_id,
         ),
     )
-    b_side_ip = netbox_create_available_ip(
+    b_side_ip = netbox.create_available_ip(
         parent_id=current_circuit_prefix_127.id,
-        payload=NetboxAvailableIpPayload(
+        payload=netbox.AvailableIpPayload(
             description=subscription.circuit.members[1].port.port_description,
             assigned_object_id=subscription.circuit.members[1].port.port_id,
         ),
@@ -240,7 +231,7 @@ def set_circuit_in_service(subscription: CircuitProvisioning) -> State:
 def create_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
     """Creates a circuit in Netbox"""
     netbox_payload = build_payload(subscription.circuit, subscription)
-    subscription.circuit.circuit_id = netbox_create(netbox_payload)
+    subscription.circuit.circuit_id = netbox.create(netbox_payload)
     return {"subscription": subscription, "netbox_payload": netbox_payload.dict()}
 
 
@@ -248,7 +239,7 @@ def create_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
 def update_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
     """Updates a circuit in Netbox"""
     netbox_payload = build_payload(subscription.circuit, subscription)
-    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox_update(netbox_payload)}
+    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox.update(netbox_payload)}
 
 
 @create_workflow(
