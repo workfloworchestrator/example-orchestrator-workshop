@@ -15,9 +15,11 @@ from typing import Any
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionModel
 
+from products.product_blocks.circuit import CircuitBlockProvisioning
 from products.product_blocks.node import NodeBlockProvisioning
+from products.services.netbox.payload.circuit import build_circuit_payload
 from products.services.netbox.payload.node import build_node_payload
-from services.netbox import NetboxDevicePayload, NetboxPayload
+from services.netbox import NetboxCablePayload, NetboxDevicePayload, NetboxPayload
 from utils.singledispatch import single_dispatch_base
 
 
@@ -47,3 +49,8 @@ def build_payload(model: ProductBlockModel, subscription: SubscriptionModel, **k
 @build_payload.register
 def _(model: NodeBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> NetboxDevicePayload:
     return build_node_payload(model, subscription)
+
+
+@build_payload.register
+def _(model: CircuitBlockProvisioning, subscription: SubscriptionModel, **kwargs: Any) -> NetboxCablePayload:
+    return build_circuit_payload(model, subscription)

@@ -3,7 +3,6 @@ The home for all shared code used in the circuit workflows.
 """
 
 from ipaddress import IPv6Interface
-from typing import List
 
 import structlog
 from orchestrator.config.assignee import Assignee
@@ -11,34 +10,13 @@ from orchestrator.forms import FormPage, ReadOnlyField
 from orchestrator.forms.validators import Accept, LongText
 from orchestrator.types import FormGenerator
 from orchestrator.workflow import inputstep
-from pynetbox.models.dcim import Interfaces as PynetboxInterfaces
 
 from products.product_types.circuit import CircuitProvisioning
-from services.netbox import netbox
 
 logger = structlog.get_logger(__name__)
 # The ID of the Subnet Block we will use for assigning IPs to circuits
 CIRCUIT_PREFIX_IPAM_ID = 3
 ISIS_AREA_ID = "49.0001.0123.4567.890a.0001.00"
-
-
-def fetch_available_router_ports_by_name(router_name: str) -> List[PynetboxInterfaces]:
-    """
-    fetch_available_router_ports_by_name fetches a list of available ports from netbox
-        when given the name of a router. To be considered available, the port must be:
-            1) A 400G interface (any media type)
-            2) On the router specified.
-            3) Not "occupied" from netbox's perspective.
-
-    Args:
-        router_name (str): the router that you need to find an open port from, i.e. "loc1-core".
-
-    Returns:
-        List[PynetboxInterfaces]: a list of valid interfaces from netbox.
-    """
-    valid_ports = list(netbox.dcim.interfaces.filter(device=router_name, occupied=False, speed=400000000))
-    logger.debug("Found ports in Netbox", amount=len(valid_ports))
-    return valid_ports
 
 
 def render_circuit_endpoint_config(

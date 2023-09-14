@@ -13,7 +13,7 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.node import NodeInactive, NodeProvisioning
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
-from services.netbox import netbox_create_or_update, netbox_get_device, netbox_get_devices
+from services.netbox import netbox_get_device, netbox_get_devices, netbox_update
 from workflows.shared import CUSTOMER_UUID, create_workflow
 
 logger = structlog.get_logger(__name__)
@@ -134,7 +134,7 @@ def update_node_in_netbox(
 ) -> State:
     """Updates a node in Netbox"""
     netbox_payload = build_payload(subscription.node, subscription)
-    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox_create_or_update(netbox_payload)}
+    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox_update(netbox_payload)}
 
 
 @create_workflow(
@@ -149,8 +149,8 @@ def create_node() -> StepList:
         >> construct_node_model
         >> store_process_subscription(Target.CREATE)
         >> fetch_ip_address_information
-        >> provide_config_to_user
         >> set_status(SubscriptionLifecycle.PROVISIONING)
+        >> provide_config_to_user
         >> set_node_to_active
         >> update_node_in_netbox
     )

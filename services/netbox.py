@@ -19,6 +19,8 @@ from pynetbox import api
 from pynetbox.core.endpoint import Endpoint
 from pynetbox.core.query import RequestError
 from pynetbox.models.dcim import Devices
+from pynetbox.models.dcim import Interfaces
+from pynetbox.models.dcim import Interfaces as PynetboxInterfaces
 from pynetbox.models.ipam import IpAddresses
 
 from utils.singledispatch import single_dispatch_base
@@ -33,7 +35,7 @@ netbox = api(
 
 @dataclass
 class NetboxPayload:
-    id: int  # all objects on any endpoint have a unique id
+    id: int  # unique id of object on Netbox endpoint
 
     # return payload as a dict that is suitable to be used on pynetbox .create() or .updates().
     def dict(self):
@@ -51,6 +53,20 @@ class NetboxDevicePayload(NetboxPayload):
     status: Optional[str]
     primary_ip4: Optional[int]
     primary_ip6: Optional[int]
+
+
+@dataclass
+class NetboxCableTerminationPayload:
+    object_id: int
+    object_type: str = "dcim.interface"
+
+
+@dataclass
+class NetboxCablePayload(NetboxPayload):
+    status: str
+    description: Optional[str]
+    a_terminations: List[NetboxCableTerminationPayload]
+    b_terminations: List[NetboxCableTerminationPayload]
 
 
 def netbox_get_device(name: str) -> Devices:
@@ -73,6 +89,33 @@ def netbox_get_devices(status: Optional[str] = None) -> List[Devices]:
     return node_list
 
 
+# TODO: make this a more generic function
+def netbox_get_available_router_ports_by_name(router_name: str) -> List[PynetboxInterfaces]:
+    """
+    get_available_router_ports_by_name fetches a list of available ports from netbox
+        when given the name of a router. To be considered available, the port must be:
+            1) A 400G interface (any media type)
+            2) On the router specified.
+            3) Not "occupied" from netbox's perspective.
+
+    Args:
+        router_name (str): the router that you need to find an open port from, i.e. "loc1-core".
+
+    Returns:
+        List[PynetboxInterfaces]: a list of valid interfaces from netbox.
+    """
+    valid_ports = list(netbox.dcim.interfaces.filter(device=router_name, occupied=False, speed=400000000))
+    logger.debug("Found ports in Netbox", amount=len(valid_ports))
+    return valid_ports
+
+
+def netbox_get_interface_by_device_and_name(device: str, name: str) -> Interfaces:
+    """
+    Get Interfaces object from Netbox identified by device and name.
+    """
+    return next(netbox.dcim.interfaces.filter(device=device, name=name))
+
+
 def netbox_get_ip_address(address: str) -> IpAddresses:
     """
     Get IP IpAddress object from Netbox identified by address.
@@ -81,8 +124,8 @@ def netbox_get_ip_address(address: str) -> IpAddresses:
 
 
 @singledispatch
-def netbox_create_or_update(payload: NetboxPayload, **kwargs: Any) -> bool:
-    """Create or update object described by payload in Netbox (generic function).
+def netbox_create(payload: NetboxPayload, **kwargs: Any) -> int:
+    """Create object described by payload in Netbox (generic function).
 
     Specific implementations of this generic function will specify the payload types they work on.
 
@@ -90,22 +133,75 @@ def netbox_create_or_update(payload: NetboxPayload, **kwargs: Any) -> bool:
         payload: Netbox object specific payload.
 
     Returns:
-        True if the object was created or updated successfully in Netbox, False otherwise.
+        The id of the created object in Netbox, raises an exception otherwise.
 
     Raises:
         TypeError: in case a specific implementation could not be found. The payload it was called for will be
             part of the error message.
 
     """
-    return single_dispatch_base(netbox_create_or_update, payload)
+    return single_dispatch_base(netbox_create, payload)
 
 
-@netbox_create_or_update.register
+@singledispatch
+def netbox_update(payload: NetboxPayload, **kwargs: Any) -> bool:
+    """Update object described by payload in Netbox (generic function).
+
+    Specific implementations of this generic function will specify the payload types they work on.
+
+    Args:
+        payload: Netbox object specific payload.
+
+    Returns:
+        True if the object was updated successfully in Netbox, False otherwise.
+
+    Raises:
+        TypeError: in case a specific implementation could not be found. The payload it was called for will be
+            part of the error message.
+
+    """
+    return single_dispatch_base(netbox_update, payload)
+
+
+@netbox_update.register
 def _(payload: NetboxDevicePayload, **kwargs: Any) -> bool:
-    return _netbox_create_or_update_object(payload, endpoint=netbox.dcim.devices)
+    return _netbox_update_object(payload, endpoint=netbox.dcim.devices)
 
 
-def _netbox_create_or_update_object(payload: NetboxDevicePayload, endpoint: Endpoint) -> bool:
+@netbox_create.register
+def _(payload: NetboxCablePayload, **kwargs: Any) -> bool:
+    return _netbox_create_object(payload, endpoint=netbox.dcim.cables)
+
+
+@netbox_update.register
+def _(payload: NetboxCablePayload, **kwargs: Any) -> bool:
+    return _netbox_update_object(payload, endpoint=netbox.dcim.cables)
+
+
+def _netbox_create_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
+    """
+    Create an object in Netbox.
+
+    Args:
+        payload: values to create object
+        endpoint: a Netbox Endpoint
+
+    Returns:
+         The id of the created object in Netbox, raises an exception otherwise.
+
+    Raises:
+        RequestError: the pynetbox exception that was raised.
+    """
+    try:
+        object = endpoint.create(payload.dict())
+    except RequestError as exc:
+        logger.warning("Netbox create failed", payload=payload, exc=str(exc))
+        raise ValueError(f"invalid NetboxPayload: {exc.message}") from exc
+    else:
+        return object.id
+
+
+def _netbox_update_object(payload: NetboxPayload, endpoint: Endpoint) -> bool:
     """
     Create or update an object in Netbox.
 
@@ -115,17 +211,11 @@ def _netbox_create_or_update_object(payload: NetboxDevicePayload, endpoint: Endp
 
     Returns:
          True if the node was created or updated, False otherwise
+
+    Raises:
+        ValueError if object does not exist yet in Netbox.
     """
-    if not payload.id:
-        try:
-            endpoint.create(payload.dict())
-        except RequestError as exc:
-            logger.warning("Netbox create failed", payload=payload, exc=str(exc))
-            return False
-        else:
-            return True
-    else:
-        if not (object := endpoint.get(payload.id)):
-            raise ValueError(f"Netbox object with id {payload.id} on netbox {endpoint.name} endpoint not found")
-        object.update(payload.dict())
-        return object.save()
+    if not (object := endpoint.get(payload.id)):
+        raise ValueError(f"Netbox object with id {payload.id} on netbox {endpoint.name} endpoint not found")
+    object.update(payload.dict())
+    return object.save()

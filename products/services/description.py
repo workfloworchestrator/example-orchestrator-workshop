@@ -46,7 +46,7 @@ def description(model: Union[ProductModel, ProductBlockModel, SubscriptionModel]
 
 @description.register
 def node_product_description(node: NodeInactive) -> str:
-    return f"Node {node.node.node_name} (via single dispatch)"
+    return f"Node {node.node.node_name}"
 
 
 @description.register

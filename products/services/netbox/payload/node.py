@@ -44,13 +44,14 @@ def build_node_payload(model: NodeBlockProvisioning, subscription: SubscriptionM
     if not model.node_id:
         raise ValueError("Build node payload not implemented for new nodes")
 
+    # device is not created by the orchestrator, fetch needed fields from Netbox
     device = netbox_get_device(model.node_name)
 
     return NetboxDevicePayload(
         site=device.site.id,  # not yet administrated in orchestrator
         device_type=device.device_type.id,  # not yet administrated in orchestrator
         device_role=device.device_type.id,  # not yet administrated in orchestrator
-        id=model.node_id,
+        id=model.node_id if model.node_id else -1,
         name=model.node_name,
         status=model.node_status,
         primary_ip4=netbox_get_ip_address(str(model.ipv4_loopback)).id,

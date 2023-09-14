@@ -12,12 +12,15 @@ from orchestrator.workflows.steps import set_status, store_process_subscription
 from products.product_types.circuit import CircuitInactive, CircuitProvisioning
 from products.product_types.node import Node
 from products.services.description import description
-from services.netbox import netbox
-from workflows.circuit.shared import (
-    CIRCUIT_PREFIX_IPAM_ID,
-    fetch_available_router_ports_by_name,
-    provide_config_to_user,
+from products.services.netbox.netbox import build_payload
+from services.netbox import (
+    netbox,
+    netbox_create,
+    netbox_get_available_router_ports_by_name,
+    netbox_get_interface_by_device_and_name,
+    netbox_update,
 )
+from workflows.circuit.shared import CIRCUIT_PREFIX_IPAM_ID, provide_config_to_user
 from workflows.shared import CUSTOMER_UUID, create_workflow, retrieve_subscription_list_by_product
 
 logger = structlog.get_logger(__name__)
@@ -75,10 +78,10 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     # b_port_list = ["2/1/c1/1", "1/1/c2/1"]
 
     a_port_list = {}
-    for port in fetch_available_router_ports_by_name(router_name=router_a.router_a):
+    for port in netbox_get_available_router_ports_by_name(router_name=router_a.router_a):
         a_port_list[str(port.id)] = port.display
     b_port_list = {}
-    for port in fetch_available_router_ports_by_name(router_name=router_b.router_b):
+    for port in netbox_get_available_router_ports_by_name(router_name=router_b.router_b):
         b_port_list[str(port.id)] = port.display
 
     APort = Choice(
@@ -140,55 +143,38 @@ def construct_circuit_model(
     # Next, we add the circuit details to the subscription
     logger.debug("Adding Base Circuit Model fields to Subscription")
 
-    a_port = list(netbox.dcim.interfaces.filter(device=router_a.node.node_name, name=ports["a_port"]))[0]
-    b_port = list(netbox.dcim.interfaces.filter(device=router_b.node.node_name, name=ports["b_port"]))[0]
-    netbox_circuit = netbox.dcim.cables.create(
-        a_terminations=[{"object_id": a_port.id, "object_type": "dcim.interface"}],
-        b_terminations=[{"object_id": b_port.id, "object_type": "dcim.interface"}],
-        status="planned",
-    )
+    a_port = netbox_get_interface_by_device_and_name(device=router_a.node.node_name, name=ports["a_port"])
+    b_port = netbox_get_interface_by_device_and_name(device=router_b.node.node_name, name=ports["b_port"])
 
-    subscription.circuit.circuit_id = netbox_circuit.id
-    subscription.circuit.under_maintenance = True
-
-    # Link the existing node subscriptions from the DB to the circuit subscription:
+    # Add A-side and B-side to the circuit subscription:
     subscription.circuit.members[0].port.node = router_a.node
+    subscription.circuit.members[0].port.port_id = a_port.id
+    subscription.circuit.members[0].port.port_name = a_port.display
     subscription.circuit.members[1].port.node = router_b.node
+    subscription.circuit.members[1].port.port_id = b_port.id
+    subscription.circuit.members[1].port.port_name = b_port.display
 
-    # Here, we construct the port product block portions of the domain model:
-    subscription.circuit.members[0].port.port_name = netbox_circuit.a_terminations[0].display
-    subscription.circuit.members[0].port.port_id = netbox_circuit.a_terminations[0].id
+    # Generate the port descriptions to be used in the config shown to the user
     subscription.circuit.members[0].port.port_description = description(subscription.circuit.members[0])
-
-    subscription.circuit.members[1].port.port_name = netbox_circuit.b_terminations[0].display
-    subscription.circuit.members[1].port.port_id = netbox_circuit.b_terminations[0].id
     subscription.circuit.members[1].port.port_description = description(subscription.circuit.members[1])
 
-    # Generate the circuit description to be used by various later things
-    subscription.circuit.circuit_description = description(subscription)
-    subscription.description = subscription.circuit.circuit_description
+    # Set generic circuit subscription fields
+    subscription.circuit.circuit_status = "planned"
+    subscription.circuit.under_maintenance = True
+    subscription.circuit.circuit_description = "Provisioning, see orchestrator for details"
 
-    # Update netbox's planned circuit with the circuit description
-    netbox_circuit.description = subscription.circuit.circuit_description
-    netbox_circuit.save()
-
-    return {
-        "subscription": subscription,
-        "subscription_id": subscription.subscription_id,
-    }
+    return {"subscription": subscription, "subscription_id": subscription.subscription_id}
 
 
 @step("Reserve IPs in Netbox")
-def reserve_ips_in_ipam(
-    subscription: CircuitInactive,
-) -> State:
+def reserve_ips_in_ipam(subscription: CircuitInactive) -> State:
     """
     Reserves the IPs for this circuit in Netbox and adds them to the domain model
     """
     logger.debug("Reserving IPs in NetBox")
-    circuit_block_prefix = netbox.ipam.prefixes.get(CIRCUIT_PREFIX_IPAM_ID)
+    circuit_block_prefix = netbox.ipam.prefixes.get(CIRCUIT_PREFIX_IPAM_ID)  # TODO
     # First, reserve a /64 pool for future use.
-    current_circuit_prefix_64 = circuit_block_prefix.available_prefixes.create(
+    current_circuit_prefix_64 = circuit_block_prefix.available_prefixes.create(  # TODO
         {
             "prefix_length": 64,
             "description": f"{subscription.circuit.circuit_description} Parent /64",
@@ -196,14 +182,14 @@ def reserve_ips_in_ipam(
         }
     )
     # Next, reserve a /127 point-to-point subnet for the circuit (from the above /64).
-    current_circuit_prefix_127 = current_circuit_prefix_64.available_prefixes.create(
+    current_circuit_prefix_127 = current_circuit_prefix_64.available_prefixes.create(  # TODO
         {
             "prefix_length": 127,
             "description": f"{subscription.circuit.circuit_description} Point-to-Point",
         }
     )
     # Now, create the NetBox IP Address entries for the devices on each side of the link:
-    a_side_ip = current_circuit_prefix_127.available_ips.create(
+    a_side_ip = current_circuit_prefix_127.available_ips.create(  # TODO
         {
             "description": subscription.circuit.members[0].port.port_description,
             "assigned_object_type": "dcim.interface",
@@ -211,7 +197,7 @@ def reserve_ips_in_ipam(
             "status": "active",
         }
     )
-    b_side_ip = current_circuit_prefix_127.available_ips.create(
+    b_side_ip = current_circuit_prefix_127.available_ips.create(  # TODO
         {
             "description": subscription.circuit.members[1].port.port_description,
             "assigned_object_type": "dcim.interface",
@@ -233,18 +219,34 @@ def reserve_ips_in_ipam(
     return {"subscription": subscription}
 
 
-@step("Update Circuit Status in Netbox")
-def update_circuit_status_netbox(
-    subscription: CircuitProvisioning,
-) -> State:
-    """
-    Update the circuit state in netbox now that everything is done.
-    """
-    circuit = netbox.dcim.cables.get(subscription.circuit.circuit_id)
-    circuit.status = "connected"
-    circuit.save()
+@step("Update Circuit description")
+def update_circuit_description(subscription: CircuitProvisioning) -> State:
+    """Updates the circuit description."""
+    subscription.circuit.circuit_description = description(subscription)
+    subscription.description = subscription.circuit.circuit_description
+    return {"subscription": subscription}
 
-    return {"circuit_status": circuit.status}
+
+@step("Set Circuit in service")
+def set_circuit_in_service(subscription: CircuitProvisioning) -> State:
+    """Set the circuit status to connected."""
+    subscription.circuit.circuit_status = "connected"
+    return {"subscription": subscription}
+
+
+@step("Create Circuit in Netbox")
+def create_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
+    """Creates a circuit in Netbox"""
+    netbox_payload = build_payload(subscription.circuit, subscription)
+    subscription.circuit.circuit_id = netbox_create(netbox_payload)
+    return {"subscription": subscription, "netbox_payload": netbox_payload.dict()}
+
+
+@step("Update Circuit in Netbox")
+def update_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
+    """Updates a circuit in Netbox"""
+    netbox_payload = build_payload(subscription.circuit, subscription)
+    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox_update(netbox_payload)}
 
 
 @create_workflow(
@@ -259,7 +261,11 @@ def create_circuit() -> StepList:
         >> construct_circuit_model
         >> store_process_subscription(Target.CREATE)
         >> reserve_ips_in_ipam
-        >> provide_config_to_user
         >> set_status(SubscriptionLifecycle.PROVISIONING)
-        >> update_circuit_status_netbox
+        >> create_circuit_in_netbox
+        >> update_circuit_description
+        >> update_circuit_in_netbox
+        >> provide_config_to_user
+        >> set_circuit_in_service
+        >> update_circuit_in_netbox
     )
