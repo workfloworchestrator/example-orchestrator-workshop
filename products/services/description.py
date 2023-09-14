@@ -16,8 +16,8 @@ from typing import Union
 
 from orchestrator.domain.base import ProductBlockModel, ProductModel, SubscriptionModel
 
-from products.product_blocks.circuit import Layer3InterfaceInactive
-from products.product_types.circuit import CircuitInactive
+from products.product_blocks.circuit import CircuitBlockInactive, Layer3InterfaceInactive
+from products.product_types.circuit import CircuitProvisioning
 from products.product_types.node import NodeInactive
 from utils.singledispatch import single_dispatch_base
 
@@ -56,7 +56,6 @@ def layer3interface_product_block_description(layer3interface: Layer3InterfaceIn
     and any system that needs to generate an interface description. This function holds the
     business logic for doing so.
 
-    Args:
         layer3interface.port.node.node_name (str): This is the name of the device on the far
             side of the circuit from this interface's perspective. (i.e. loc2-core)
         layer3interface.port.port_name (str): This is the name of the port on the far side of
@@ -70,32 +69,45 @@ def layer3interface_product_block_description(layer3interface: Layer3InterfaceIn
 
 
 @description.register
-def circuit_product_description(circuit: CircuitInactive) -> str:
+def circuit_product_block_description(circuit: CircuitBlockInactive) -> str:
     """
-    generate_circuit_description creates a circuit description that is used by The Orchestrator
+    circuit_product_block_description creates a circuit block description that is used by The Orchestrator
     and any system that needs to generate a circuit description. This function holds the
     business logic for doing so.
 
-    Args:
-        circuit.circuit_id (int): This is the circuit ID that is in netbox. This is a unique
-            integer to this circuit. (i.e. 7)
+         circuit.members[0].port.node.node_name (str): This is the name of the device on the "A" side of the
+         circuit. For netbox's API, this is the first item in the list of circuit endpoints. (i.e. loc1-core)
 
-        circuit.members[0].port.node.node_name (str): This is the name of the device on the "A" side of the
-            circuit. For netbox's API, this is the first item in the list of circuit endpoints. (i.e. loc1-core)
+         circuit.members[0].port.port_name (str): This is the name of the port on the "A" side of the circuit.
+         For netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c2/1)
 
-        circuit.members[0].port.port_name (str): This is the name of the port on the "A" side of the circuit.
-            For netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c2/1)
-
-        circuit.members[1].port.node.node_name (str): This is the name of the device on the "B" side of the circuit.
-            For netbox's API, this is the second item in the list of circuit endpoints. (i.e. loc2-core)
+         circuit.members[1].port.node.node_name (str): This is the name of the device on the "B" side of the circuit.
+         For netbox's API, this is the second item in the list of circuit endpoints. (i.e. loc2-core)
 
         circuit.members[1].port.port_name (str): This is the name of the port on the "B" side of the circuit. For
-            netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c1/1)
+        netbox's API, this is the first item in the list of circuit endpoints. (i.e. 1/1/c1/1)
 
     Returns:
-        str: The assembled circuit description. Given the examples above this function would return:
+        str: The assembled circuit block description. Given the examples above this function would return:
+        loc1-core:1/1/c2/1 <--> loc2-core:1/1/c1/1"
+    """
+    a_side = f"{circuit.members[0].port.node.node_name}:{circuit.members[0].port.port_name}"
+    b_side = f"{circuit.members[1].port.node.node_name}:{circuit.members[1].port.port_name}"
+    return f"{a_side} <--> {b_side}"
+
+
+@description.register
+def circuit_product_description(circuit: CircuitProvisioning) -> str:
+    """
+    circuit_product_description creates a circuit subscription description. This function holds the
+    business logic for doing so.
+
+        circuit.circuit.circuit_id (int): This is the circuit ID that is in netbox. This is a unique
+            integer to this circuit. (i.e. 7)
+
+        circuit.circuit.circuit_description (str): The circuit block description
+    Returns:
+        str: The assembled circuit subscription description. Given the examples above this function would return:
         "Circuit ID 7: loc1-core:1/1/c2/1 <--> loc2-core:1/1/c1/1"
     """
-    a_side = f"{circuit.circuit.members[0].port.node.node_name}:{circuit.circuit.members[0].port.port_name}"
-    b_side = f"{circuit.circuit.members[1].port.node.node_name}:{circuit.circuit.members[1].port.port_name}"
-    return f"Circuit ID {circuit.circuit.circuit_id}: {a_side} <--> {b_side}"
+    return f"Circuit ID {circuit.circuit.circuit_id}: {circuit.circuit.circuit_description}"

@@ -21,7 +21,7 @@ from pynetbox.core.query import RequestError
 from pynetbox.models.dcim import Devices
 from pynetbox.models.dcim import Interfaces
 from pynetbox.models.dcim import Interfaces as PynetboxInterfaces
-from pynetbox.models.ipam import IpAddresses
+from pynetbox.models.ipam import IpAddresses, Prefixes
 
 from utils.singledispatch import single_dispatch_base
 
@@ -67,6 +67,21 @@ class NetboxCablePayload(NetboxPayload):
     description: Optional[str]
     a_terminations: List[NetboxCableTerminationPayload]
     b_terminations: List[NetboxCableTerminationPayload]
+
+
+@dataclass
+class NetboxAvailablePrefixPayload:
+    prefix_length: int
+    description: str
+    is_pool: Optional[bool] = False
+
+
+@dataclass
+class NetboxAvailableIpPayload:
+    description: str
+    assigned_object_id: int
+    assigned_object_type: Optional[str] = "dcim.interface"
+    status: Optional[str] = "active"
 
 
 def netbox_get_device(name: str) -> Devices:
@@ -118,9 +133,26 @@ def netbox_get_interface_by_device_and_name(device: str, name: str) -> Interface
 
 def netbox_get_ip_address(address: str) -> IpAddresses:
     """
-    Get IP IpAddress object from Netbox identified by address.
+    Get IpAddresses object from Netbox identified by address.
     """
     return netbox.ipam.ip_addresses.get(address=address)
+
+
+def netbox_get_ip_prefix_by_id(id: int) -> Prefixes:
+    """
+    Get Prefixes object from Netbox identified by id.
+    """
+    return netbox.ipam.prefixes.get(id)
+
+
+def netbox_create_available_prefix(parent_id: int, payload: NetboxAvailablePrefixPayload) -> Prefixes:
+    parent_prefix = netbox_get_ip_prefix_by_id(parent_id)
+    return parent_prefix.available_prefixes.create(asdict(payload))
+
+
+def netbox_create_available_ip(parent_id: int, payload: NetboxAvailableIpPayload) -> IpAddresses:
+    parent_prefix = netbox_get_ip_prefix_by_id(parent_id)
+    return parent_prefix.available_ips.create(asdict(payload))
 
 
 @singledispatch

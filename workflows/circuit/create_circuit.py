@@ -14,8 +14,11 @@ from products.product_types.node import Node
 from products.services.description import description
 from products.services.netbox.netbox import build_payload
 from services.netbox import (
-    netbox,
+    NetboxAvailableIpPayload,
+    NetboxAvailablePrefixPayload,
     netbox_create,
+    netbox_create_available_ip,
+    netbox_create_available_prefix,
     netbox_get_available_router_ports_by_name,
     netbox_get_interface_by_device_and_name,
     netbox_update,
@@ -161,7 +164,7 @@ def construct_circuit_model(
     # Set generic circuit subscription fields
     subscription.circuit.circuit_status = "planned"
     subscription.circuit.under_maintenance = True
-    subscription.circuit.circuit_description = "Provisioning, see orchestrator for details"
+    subscription.circuit.circuit_description = description(subscription.circuit)
 
     return {"subscription": subscription, "subscription_id": subscription.subscription_id}
 
@@ -172,38 +175,38 @@ def reserve_ips_in_ipam(subscription: CircuitInactive) -> State:
     Reserves the IPs for this circuit in Netbox and adds them to the domain model
     """
     logger.debug("Reserving IPs in NetBox")
-    circuit_block_prefix = netbox.ipam.prefixes.get(CIRCUIT_PREFIX_IPAM_ID)  # TODO
-    # First, reserve a /64 pool for future use.
-    current_circuit_prefix_64 = circuit_block_prefix.available_prefixes.create(  # TODO
-        {
-            "prefix_length": 64,
-            "description": f"{subscription.circuit.circuit_description} Parent /64",
-            "is_pool": "on",
-        }
+    # # First, reserve a /64 pool for future use.
+    current_circuit_prefix_64 = netbox_create_available_prefix(
+        parent_id=CIRCUIT_PREFIX_IPAM_ID,
+        payload=NetboxAvailablePrefixPayload(
+            prefix_length=64,
+            description=f"{subscription.circuit.circuit_description} Parent /64",
+            is_pool=True,
+        ),
     )
+
     # Next, reserve a /127 point-to-point subnet for the circuit (from the above /64).
-    current_circuit_prefix_127 = current_circuit_prefix_64.available_prefixes.create(  # TODO
-        {
-            "prefix_length": 127,
-            "description": f"{subscription.circuit.circuit_description} Point-to-Point",
-        }
+    current_circuit_prefix_127 = netbox_create_available_prefix(  # TODO
+        parent_id=current_circuit_prefix_64.id,
+        payload=NetboxAvailablePrefixPayload(
+            prefix_length=127,
+            description=f"{subscription.circuit.circuit_description} Point-to-Point",
+        ),
     )
     # Now, create the NetBox IP Address entries for the devices on each side of the link:
-    a_side_ip = current_circuit_prefix_127.available_ips.create(  # TODO
-        {
-            "description": subscription.circuit.members[0].port.port_description,
-            "assigned_object_type": "dcim.interface",
-            "assigned_object_id": subscription.circuit.members[0].port.port_id,
-            "status": "active",
-        }
+    a_side_ip = netbox_create_available_ip(
+        parent_id=current_circuit_prefix_127.id,
+        payload=NetboxAvailableIpPayload(
+            description=subscription.circuit.members[0].port.port_description,
+            assigned_object_id=subscription.circuit.members[0].port.port_id,
+        ),
     )
-    b_side_ip = current_circuit_prefix_127.available_ips.create(  # TODO
-        {
-            "description": subscription.circuit.members[1].port.port_description,
-            "assigned_object_type": "dcim.interface",
-            "assigned_object_id": subscription.circuit.members[1].port.port_id,
-            "status": "active",
-        }
+    b_side_ip = netbox_create_available_ip(
+        parent_id=current_circuit_prefix_127.id,
+        payload=NetboxAvailableIpPayload(
+            description=subscription.circuit.members[1].port.port_description,
+            assigned_object_id=subscription.circuit.members[1].port.port_id,
+        ),
     )
 
     # Finally, add those IPv6 Addresses to the domain model.
@@ -219,11 +222,10 @@ def reserve_ips_in_ipam(subscription: CircuitInactive) -> State:
     return {"subscription": subscription}
 
 
-@step("Update Circuit description")
+@step("Update subscription description")
 def update_circuit_description(subscription: CircuitProvisioning) -> State:
     """Updates the circuit description."""
-    subscription.circuit.circuit_description = description(subscription)
-    subscription.description = subscription.circuit.circuit_description
+    subscription.description = description(subscription)
     return {"subscription": subscription}
 
 
