@@ -37,9 +37,15 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
         select_node_choice: NodeEnum  # type: ignore
 
     user_input = yield CreateNodeForm
-    node_data = next(node for node in nodes if user_input.select_node_choice == node.name)
+    node_data = next(
+        node for node in nodes if user_input.select_node_choice == node.name
+    )
 
-    return {"node_id": node_data.id, "node_name": node_data.name, "node_status": node_data.status.value}
+    return {
+        "node_id": node_data.id,
+        "node_name": node_data.name,
+        "node_status": node_data.status.value,
+    }
 
 
 @step("Construct Node model")
@@ -118,7 +124,7 @@ copy running-config startup-config"""
 @step("Set Node to active")
 def set_node_to_active(subscription: NodeProvisioning) -> State:
     """Updates a node to be Active"""
-    subscription.node.node_status = "active"
+    # Oops, we should have updated the subscription here!
     return {"subscription": subscription}
 
 
@@ -126,10 +132,17 @@ def set_node_to_active(subscription: NodeProvisioning) -> State:
 def update_node_in_netbox(subscription: NodeProvisioning) -> State:
     """Updates a node in Netbox"""
     netbox_payload = build_payload(subscription.node, subscription)
-    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox.update(netbox_payload)}
+    return {
+        "netbox_payload": netbox_payload.dict(),
+        "netbox_updated": netbox.update(netbox_payload),
+    }
 
 
-@create_workflow("Create Node", initial_input_form=initial_input_form_generator, status=SubscriptionLifecycle.ACTIVE)
+@create_workflow(
+    "Create Node",
+    initial_input_form=initial_input_form_generator,
+    status=SubscriptionLifecycle.ACTIVE,
+)
 def create_node() -> StepList:
     """Workflow step list"""
     return (

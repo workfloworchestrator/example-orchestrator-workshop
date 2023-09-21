@@ -15,7 +15,11 @@ from products.services.description import description
 from products.services.netbox.netbox import build_payload
 from services import netbox
 from workflows.circuit.shared import CIRCUIT_PREFIX_IPAM_ID, provide_config_to_user
-from workflows.shared import CUSTOMER_UUID, create_workflow, retrieve_subscription_list_by_product
+from workflows.shared import (
+    CUSTOMER_UUID,
+    create_workflow,
+    retrieve_subscription_list_by_product,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -27,10 +31,14 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     logger.debug("Generating initial input form for Circuit")
 
     # First, get the data we need to present a list of circuits to a user
-    node_subs = retrieve_subscription_list_by_product("Node", [SubscriptionLifecycle.ACTIVE])
+    node_subs = retrieve_subscription_list_by_product(
+        "Node", [SubscriptionLifecycle.ACTIVE]
+    )
     choices = {}
     for node in node_subs:
-        choices[str(node.subscription_id)] = Node.from_subscription(node.subscription_id).node.node_name
+        choices[str(node.subscription_id)] = Node.from_subscription(
+            node.subscription_id
+        ).node.node_name
 
     # choices = {"subid": "label", "subid2": "label"}
     EndpointA = Choice("Endpoint A", zip(choices, choices.values()))
@@ -72,10 +80,14 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
     # b_port_list = ["2/1/c1/1", "1/1/c2/1"]
 
     a_port_list = {}
-    for port in netbox.get_available_router_ports_by_name(router_name=router_a.router_a):
+    for port in netbox.get_available_router_ports_by_name(
+        router_name=router_a.router_a
+    ):
         a_port_list[str(port.id)] = port.display
     b_port_list = {}
-    for port in netbox.get_available_router_ports_by_name(router_name=router_b.router_b):
+    for port in netbox.get_available_router_ports_by_name(
+        router_name=router_b.router_b
+    ):
         b_port_list[str(port.id)] = port.display
 
     APort = Choice(
@@ -137,8 +149,12 @@ def construct_circuit_model(
     # Next, we add the circuit details to the subscription
     logger.debug("Adding Base Circuit Model fields to Subscription")
 
-    a_port = netbox.get_interface_by_device_and_name(device=router_a.node.node_name, name=ports["a_port"])
-    b_port = netbox.get_interface_by_device_and_name(device=router_b.node.node_name, name=ports["b_port"])
+    a_port = netbox.get_interface_by_device_and_name(
+        device=router_a.node.node_name, name=ports["a_port"]
+    )
+    b_port = netbox.get_interface_by_device_and_name(
+        device=router_b.node.node_name, name=ports["b_port"]
+    )
 
     # Add A-side and B-side to the circuit subscription:
     subscription.circuit.members[0].port.node = router_a.node
@@ -149,15 +165,22 @@ def construct_circuit_model(
     subscription.circuit.members[1].port.port_name = b_port.display
 
     # Generate the port descriptions to be used in the config shown to the user
-    subscription.circuit.members[0].port.port_description = description(subscription.circuit.members[0])
-    subscription.circuit.members[1].port.port_description = description(subscription.circuit.members[1])
+    subscription.circuit.members[0].port.port_description = description(
+        subscription.circuit.members[0]
+    )
+    subscription.circuit.members[1].port.port_description = description(
+        subscription.circuit.members[1]
+    )
 
     # Set generic circuit subscription fields
     subscription.circuit.circuit_status = "planned"
     subscription.circuit.under_maintenance = True
     subscription.circuit.circuit_description = description(subscription.circuit)
 
-    return {"subscription": subscription, "subscription_id": subscription.subscription_id}
+    return {
+        "subscription": subscription,
+        "subscription_id": subscription.subscription_id,
+    }
 
 
 @step("Reserve IPs in Netbox")
@@ -239,7 +262,10 @@ def create_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
 def update_circuit_in_netbox(subscription: CircuitProvisioning) -> State:
     """Updates a circuit in Netbox"""
     netbox_payload = build_payload(subscription.circuit, subscription)
-    return {"netbox_payload": netbox_payload.dict(), "netbox_updated": netbox.update(netbox_payload)}
+    return {
+        "netbox_payload": netbox_payload.dict(),
+        "netbox_updated": netbox.update(netbox_payload),
+    }
 
 
 @create_workflow(
