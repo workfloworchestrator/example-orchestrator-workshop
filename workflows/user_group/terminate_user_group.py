@@ -33,7 +33,6 @@ def deprovision_user_group(subscription: UserGroup) -> None:
     target=Target.TERMINATE,
 )
 def terminate_user_group():
-
     return (
         init
         >> store_process_subscription(Target.TERMINATE)

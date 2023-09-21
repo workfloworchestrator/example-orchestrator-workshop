@@ -13,15 +13,11 @@ class UserGroupBlockInactive(
     group_id: Optional[int] = None
 
 
-class UserGroupBlockProvisioning(
-    UserGroupBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class UserGroupBlockProvisioning(UserGroupBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     group_name: str
     group_id: Optional[int] = None
 
 
-class UserGroupBlock(
-    UserGroupBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]
-):
+class UserGroupBlock(UserGroupBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     group_name: str
     group_id: int

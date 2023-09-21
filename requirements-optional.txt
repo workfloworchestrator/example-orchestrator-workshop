@@ -1,0 +1,10 @@
+orchestrator-core
+pydantic[email]
+deepdiff==5.6.0
+ujson
+msgpack
+aioredlock
+uvicorn
+debugpy
+pynetbox
+pytest

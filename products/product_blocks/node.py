@@ -1,4 +1,4 @@
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import IPv4Network, IPv6Network
 
 from orchestrator.domain.base import ProductBlockModel
 from orchestrator.types import SubscriptionLifecycle
@@ -14,19 +14,19 @@ class NodeBlockInactive(ProductBlockModel, product_block_name="Node"):
     # when first created we expect all resources to be none
     node_id: int | None = None
     node_name: str | None = None
-    ipv4_loopback: IPv4Address | None = None
-    ipv6_loopback: IPv6Address | None = None
+    node_status: str | None = None
+    ipv4_loopback: IPv4Network | None = None
+    ipv6_loopback: IPv6Network | None = None
 
 
-class NodeBlockProvisioning(
-    NodeBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class NodeBlockProvisioning(NodeBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Node Enrollment with optional fields to use in the provisioning lifecycle state."""
 
     node_id: int
     node_name: str
-    ipv4_loopback: IPv4Address
-    ipv6_loopback: IPv6Address
+    node_status: str
+    ipv4_loopback: IPv4Network
+    ipv6_loopback: IPv6Network
 
 
 class NodeBlock(NodeBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
@@ -34,5 +34,6 @@ class NodeBlock(NodeBlockProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE])
 
     node_id: int
     node_name: str
-    ipv4_loopback: IPv4Address
-    ipv6_loopback: IPv6Address
+    node_status: str
+    ipv4_loopback: IPv4Network
+    ipv6_loopback: IPv6Network

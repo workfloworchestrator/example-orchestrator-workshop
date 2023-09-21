@@ -1,5 +1,5 @@
-from typing import TypeVar
 from ipaddress import IPv6Interface
+from typing import TypeVar
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle
@@ -48,27 +48,21 @@ class Port(PortProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
 
 
 # Layer 3 Interface
-class Layer3InterfaceInactive(
-    ProductBlockModel, product_block_name="Layer 3 Interface"
-):
+class Layer3InterfaceInactive(ProductBlockModel, product_block_name="Layer 3 Interface"):
     """Object model for a Layer 3 Interface as used by Circuit"""
 
     port: PortInactive
     v6_ip_address: IPv6Interface | None = None
 
 
-class Layer3InterfaceProvisioning(
-    Layer3InterfaceInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class Layer3InterfaceProvisioning(Layer3InterfaceInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Layer 3 Interface with fields for use in the provisioning lifecycle"""
 
     port: PortProvisioning
     v6_ip_address: IPv6Interface
 
 
-class Layer3Interface(
-    Layer3InterfaceProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]
-):
+class Layer3Interface(Layer3InterfaceProvisioning, lifecycle=[SubscriptionLifecycle.ACTIVE]):
     """Layer 3 Interface with fields for use in the active lifecycle"""
 
     port: Port
@@ -82,18 +76,18 @@ class CircuitBlockInactive(ProductBlockModel, product_block_name="Circuit"):
 
     members: PortPair[Layer3InterfaceInactive]
     circuit_id: int | None = None
-    circuit_description : str | None = None
+    circuit_status: str | None = None
+    circuit_description: str | None = None
     under_maintenance: bool | None = None
 
 
-class CircuitBlockProvisioning(
-    CircuitBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]
-):
+class CircuitBlockProvisioning(CircuitBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Circuit with fields for use in the provisioning lifecycle"""
 
     members: PortPair[Layer3InterfaceProvisioning]
-    circuit_id: int
-    circuit_description : str
+    circuit_id: int | None = None
+    circuit_status: str
+    circuit_description: str
     under_maintenance: bool
 
 
@@ -102,5 +96,6 @@ class CircuitBlock(CircuitBlockProvisioning, lifecycle=[SubscriptionLifecycle.AC
 
     members: PortPair[Layer3Interface]
     circuit_id: int
-    circuit_description : str
+    circuit_status: str
+    circuit_description: str
     under_maintenance: bool

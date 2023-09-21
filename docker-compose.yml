@@ -118,7 +118,7 @@ services:
 
   orchestrator:
     &orchestrator
-    image: "ghcr.io/workfloworchestrator/orchestrator-core:edge"
+    image: "ghcr.io/workfloworchestrator/orchestrator-core:1.2.3"
     env_file: ./etc/orchestrator/orchestrator.env
     ports:
       - "8080:8080"
@@ -131,7 +131,8 @@ services:
       - ./migrations:/home/orchestrator/migrations
       - ./etc:/home/orchestrator/etc
       - ./main.py:/home/orchestrator/main.py
-      - ./utils.py:/home/orchestrator/utils.py
+      - ./utils:/home/orchestrator/utils
+      - ./services:/home/orchestrator/services
       - ./requirements.txt:/home/orchestrator/requirements.txt
       - ./alembic.ini:/home/orchestrator/alembic.ini
       - ./translations:/home/orchestrator/translations

@@ -1,10 +1,10 @@
-from orchestrator.workflow import StepList, begin
-from orchestrator.workflows.utils import validate_workflow
-from workflows.shared import is_active
 from orchestrator.types import State, UUIDstr
-from orchestrator.workflow import StepList, step
+from orchestrator.workflow import StepList, begin, step
+from orchestrator.workflows.utils import validate_workflow
+
 from products.product_types.node import Node
-from utils import netbox
+from services.netbox import netbox
+from workflows.shared import is_active
 
 
 @step("Load relevant Node subscription information")

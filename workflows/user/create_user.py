@@ -54,7 +54,6 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
 
 
 def _provision_in_user_management_system(username: str, age: int) -> int:
-
     return abs(hash(username))
 
 
@@ -92,7 +91,6 @@ def provision_user(subscription: UserProvisioning, username: str, age: int) -> S
     target=Target.CREATE,
 )
 def create_user():
-
     return (
         init
         >> create_subscription

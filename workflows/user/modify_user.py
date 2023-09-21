@@ -48,5 +48,4 @@ def modify_user_subscription(subscription: User, username: str, age: int, user_g
     target=Target.MODIFY,
 )
 def modify_user():
-
     return init >> store_process_subscription(Target.MODIFY) >> unsync >> modify_user_subscription >> resync >> done
