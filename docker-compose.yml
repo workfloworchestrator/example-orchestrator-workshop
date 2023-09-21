@@ -118,7 +118,7 @@ services:
 
   orchestrator:
     &orchestrator
-    image: "ghcr.io/workfloworchestrator/orchestrator-core:edge"
+    image: "ghcr.io/workfloworchestrator/orchestrator-core:1.2.3"
     env_file: ./etc/orchestrator/orchestrator.env
     ports:
       - "8080:8080"
