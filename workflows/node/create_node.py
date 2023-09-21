@@ -22,9 +22,9 @@ logger = structlog.get_logger(__name__)
 def initial_input_form_generator(product_name: str) -> FormGenerator:
     """Generates the Node Form to display to the user."""
     logger.debug("Generating initial input form")
-    nodes = netbox.get_devices(status="planned")
-    choices = [node.name for node in nodes]
-    NodeEnum = Choice("Planned nodes", zip(choices, choices))  # type: ignore
+    devices = netbox.get_devices(status="planned")
+    choices = [device.name for device in devices]
+    DeviceEnum = Choice("Planned devices", zip(choices, choices))  # type: ignore
 
     class CreateNodeForm(FormPage):
         """FormPage for Creating a node"""
@@ -34,38 +34,38 @@ def initial_input_form_generator(product_name: str) -> FormGenerator:
 
             title = product_name
 
-        select_node_choice: NodeEnum  # type: ignore
+        select_device_choice: DeviceEnum  # type: ignore
 
     user_input = yield CreateNodeForm
-    node_data = next(
-        node for node in nodes if user_input.select_node_choice == node.name
+    device_data = next(
+        device for device in devices if user_input.select_device_choice == device.name
     )
 
     return {
-        "node_id": node_data.id,
-        "node_name": node_data.name,
-        "node_status": node_data.status.value,
+        "device_id": device_data.id,
+        "device_name": device_data.name,
+        "device_status": device_data.status.value
     }
 
 
 @step("Construct Node model")
 def construct_node_model(
     product: UUIDstr,
-    node_id: int,
-    node_name: str,
-    node_status: str,
+    device_id: int,
+    device_name: str,
+    device_status: str,
 ) -> State:
     """Creates the node model in its initial state."""
-    logger.debug("Constructing Node model for node", node_name=node_name)
+    logger.debug("Constructing Node model for node", device_name=device_name)
     subscription = NodeInactive.from_product_id(
         product_id=product,
         customer_id=CUSTOMER_UUID,
         status=SubscriptionLifecycle.INITIAL,
     )
 
-    subscription.node.node_id = node_id
-    subscription.node.node_name = node_name
-    subscription.node.node_status = node_status
+    subscription.node.node_id = device_id
+    subscription.node.node_name = device_name
+    subscription.node.node_status = device_status
     subscription.description = description(subscription)
 
     return {
