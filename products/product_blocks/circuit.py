@@ -1,5 +1,5 @@
 from ipaddress import IPv6Interface
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 from orchestrator.domain.base import ProductBlockModel, SubscriptionInstanceList
 from orchestrator.types import SubscriptionLifecycle
@@ -23,10 +23,10 @@ class PortInactive(ProductBlockModel, product_block_name="Port"):
     """Object model for a Port as used by
     Circuit Service"""
 
-    port_id: int | None = None
-    port_description: str | None = None
-    port_name: str | None = None
-    node: NodeBlock | None = None
+    port_id: Optional[int] = None
+    port_description: Optional[str] = None
+    port_name: Optional[str] = None
+    node: Optional[NodeBlock] = None
 
 
 class PortProvisioning(PortInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
@@ -52,7 +52,7 @@ class Layer3InterfaceInactive(ProductBlockModel, product_block_name="Layer 3 Int
     """Object model for a Layer 3 Interface as used by Circuit"""
 
     port: PortInactive
-    v6_ip_address: IPv6Interface | None = None
+    v6_ip_address: Optional[IPv6Interface] = None
 
 
 class Layer3InterfaceProvisioning(Layer3InterfaceInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
@@ -75,17 +75,17 @@ class CircuitBlockInactive(ProductBlockModel, product_block_name="Circuit"):
     Backbone Link Service"""
 
     members: PortPair[Layer3InterfaceInactive]
-    circuit_id: int | None = None
-    circuit_status: str | None = None
-    circuit_description: str | None = None
-    under_maintenance: bool | None = None
+    circuit_id: Optional[int] = None
+    circuit_status: Optional[str] = None
+    circuit_description: Optional[str] = None
+    under_maintenance: Optional[bool] = None
 
 
 class CircuitBlockProvisioning(CircuitBlockInactive, lifecycle=[SubscriptionLifecycle.PROVISIONING]):
     """Circuit with fields for use in the provisioning lifecycle"""
 
     members: PortPair[Layer3InterfaceProvisioning]
-    circuit_id: int | None = None
+    circuit_id: Optional[int] = None
     circuit_status: str
     circuit_description: str
     under_maintenance: bool
