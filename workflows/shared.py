@@ -84,7 +84,7 @@ def wrap_modify_initial_input_form(initial_input_form: Optional[InputStepFunc]) 
 
 
 def modify_workflow(
-    description: str, initial_input_form: InputStepFunc | None = None
+    description: str, initial_input_form: Optional[InputStepFunc] = None
 ) -> Callable[[Callable[[], StepList]], Workflow]:
     """Transform an initial_input_form and a step list into a workflow.
 
@@ -116,7 +116,7 @@ def modify_workflow(
 
 
 def terminate_workflow(
-    description: str, initial_input_form: InputStepFunc | None = None
+    description: str, initial_input_form: Optional[InputStepFunc] = None
 ) -> Callable[[Callable[[], StepList]], Workflow]:
     """Transform an initial_input_form and a step list into a workflow.
 
