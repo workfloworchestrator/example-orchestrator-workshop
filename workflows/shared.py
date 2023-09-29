@@ -166,16 +166,11 @@ def retrieve_subscription_list_by_product(product_type: str, status: List[str]) 
         SubscriptionLifecycle.ACTIVE)
 
     Returns:
-        List[SubscriptionTable]: A list of all of the subscriptions that match
+        List[SubscriptionTable]: A list of all the subscriptions that match
         your criteria.
     """
     subscriptions = (
-        SubscriptionTable.query.join(
-            ProductTable,
-            SubscriptionInstanceTable,
-            SubscriptionInstanceValueTable,
-            ResourceTypeTable,
-        )
+        SubscriptionTable.query.join(ProductTable)
         .filter(ProductTable.product_type == product_type)
         .filter(SubscriptionTable.status.in_(status))
         .all()

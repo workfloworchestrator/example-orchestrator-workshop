@@ -1,16 +1,16 @@
-"""Add modify and terminate workflows.
+"""node and circuit initial workflows.
 
-Revision ID: 6b554ed41b13
-Revises: 17bc4b457503
-Create Date: 2023-05-31 16:08:16.185913
+Revision ID: 007a889a7c71
+Revises: aa9d987fc4f3
+Create Date: 2023-09-28 14:07:19.183478
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '6b554ed41b13'
-down_revision = '17bc4b457503'
+revision = '007a889a7c71'
+down_revision = 'aa9d987fc4f3'
 branch_labels = None
 depends_on = None
 
@@ -19,15 +19,27 @@ from orchestrator.migrations.helpers import create_workflow, delete_workflow
 
 new_workflows = [
     {
+        "name": "create_node",
+        "target": "CREATE",
+        "description": "Create Node",
+        "product_type": "Node"
+    },
+    {
+        "name": "create_circuit",
+        "target": "CREATE",
+        "description": "Create Circuit",
+        "product_type": "Circuit"
+    },
+    {
         "name": "modify_circuit",
         "target": "MODIFY",
-        "description": "Modify Circuit",
+        "description": "Modify the circuit maintenance state",
         "product_type": "Circuit"
     },
     {
         "name": "terminate_circuit",
         "target": "TERMINATE",
-        "description": "Terminate Circuit",
+        "description": "Terminate the circuit",
         "product_type": "Circuit"
     }
 ]
